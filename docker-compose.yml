@@ -1,0 +1,20 @@
+services:
+  falkordb:
+    image: falkordb/falkordb:6.0.2          # bundles FalkorDB Browser on :3000
+    container_name: graphstate-falkordb
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6390:6379"               # localhost only: image runs with --protected-mode no
+      - "127.0.0.1:3000:3000"               # FalkorDB Browser (demo)
+    environment:
+      REDIS_ARGS: "--appendonly yes --appendfsync everysec --save 300 10"
+      FALKORDB_ARGS: "CACHE_SIZE 64 TIMEOUT_DEFAULT 10000 TIMEOUT_MAX 60000"
+    volumes:
+      - graphstate_data:/var/lib/falkordb/data   # real --dir (FALKORDB_DATA_PATH); /data is a symlink to it
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 2s
+      retries: 20
+volumes:
+  graphstate_data:

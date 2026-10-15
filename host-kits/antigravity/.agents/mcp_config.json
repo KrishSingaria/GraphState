@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "graphstate": {
+      "command": "{{GRAPHSTATE_BIN}}",
+      "args": ["serve", "--root", "{{ROOT}}"],
+      "cwd": "{{ROOT}}"
+    }
+  }
+}

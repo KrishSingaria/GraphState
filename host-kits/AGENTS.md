@@ -1,0 +1,10 @@
+# Working in this repository (GraphState gate is active)
+
+- Start with `get_briefing` (pass your goal). Respect the preferences, conventions and pitfalls it lists.
+- Do not edit files directly. All changes go through `propose_patch`; direct edits are blocked or flagged.
+- Read before you write: `get_file_outline` for structure, `read_symbol` for the exact source + callers.
+- Changing a signature or removing a symbol? Run `get_impact`, then update the definition and ALL callers in ONE `propose_patch`.
+- Only call functions that exist (`search_symbols` if unsure).
+- On REJECTED: fix every violation listed (file:line + fix_hint), then resubmit. Never resubmit unchanged.
+- Save durable preferences/conventions with `remember`. Never store secrets.
+- Finish with `end_session` and a short summary.

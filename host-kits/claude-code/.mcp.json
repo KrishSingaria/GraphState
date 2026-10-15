@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "graphstate": {
+      "command": "{{GRAPHSTATE_BIN}}",
+      "args": ["serve", "--root", "{{ROOT}}"],
+      "env": { "GRAPHSTATE_LOG_LEVEL": "info" }
+    }
+  }
+}

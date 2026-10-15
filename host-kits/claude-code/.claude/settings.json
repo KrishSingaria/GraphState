@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": ["mcp__graphstate__*"],
+    "deny": ["Edit", "Write", "NotebookEdit"]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^(Edit|Write|MultiEdit|NotebookEdit)$",
+        "hooks": [ { "type": "command", "command": "{{GRAPHSTATE_BIN}} hook deny-edit --host claude-code" } ]
+      }
+    ]
+  }
+}

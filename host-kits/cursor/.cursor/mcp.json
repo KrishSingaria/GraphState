@@ -1,0 +1,1 @@
+{ "mcpServers": { "graphstate": { "command": "{{GRAPHSTATE_BIN}}", "args": ["serve", "--root", "${workspaceFolder}"] } } }

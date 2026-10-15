@@ -1,0 +1,32 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-2022, preset: windows-msvc-release }
+          - { os: macos-14,     preset: macos-release }
+          - { os: ubuntu-24.04, preset: linux-release }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+      - uses: seanmiddleditch/gha-setup-ninja@v5
+      - run: cmake --preset ${{ matrix.preset }}
+      - run: cmake --build --preset ${{ matrix.preset }}
+      - run: ctest --preset ${{ matrix.preset }} -L unit
+  db-tests:
+    runs-on: ubuntu-24.04
+    services:
+      falkordb:
+        image: falkordb/falkordb-server:6.0.2
+        ports: ["6390:6379"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: seanmiddleditch/gha-setup-ninja@v5
+      - run: cmake --preset linux-release && cmake --build --preset linux-release
+      - run: ctest --preset linux-release -L "db|e2e"
