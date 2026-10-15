@@ -1,6 +1,17 @@
 # tests/CMakeLists.txt
 
-add_executable(test_unit unit/test_version.cpp unit/test_grammars.cpp unit/test_cypher_params.cpp unit/test_result_parse.cpp)
+add_executable(test_unit
+  unit/test_version.cpp
+  unit/test_grammars.cpp
+  unit/test_cypher_params.cpp
+  unit/test_result_parse.cpp
+  unit/test_python_extractor.cpp
+  unit/test_ts_extractor.cpp
+  unit/test_js_extractor.cpp
+  unit/test_syntax.cpp
+  unit/test_metrics.cpp
+  unit/test_binding.cpp
+)
 target_link_libraries(test_unit PRIVATE graphstate_core doctest::doctest)
 gs_apply_warnings(test_unit)
 

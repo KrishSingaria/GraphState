@@ -63,6 +63,10 @@ int run(int argc, char* argv[]) {
     return cmd_query(argc, argv);
   }
 
+  if (cmd == "debug-facts") {
+    return cmd_debug_facts(argc, argv);
+  }
+
   std::cerr << "Unknown command or not yet implemented: " << cmd << "\n";
   return 1;
 }
