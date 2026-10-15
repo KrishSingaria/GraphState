@@ -1,0 +1,1 @@
+{ "version": 1, "rules": { "py-mutable-default-arg": { "severity": "error" }, "py-bare-except": { "severity": "error" } } }

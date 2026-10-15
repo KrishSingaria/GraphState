@@ -67,6 +67,14 @@ int run(int argc, char* argv[]) {
     return cmd_debug_facts(argc, argv);
   }
 
+  if (cmd == "index") {
+    return cmd_index(argc, argv);
+  }
+
+  if (cmd == "status") {
+    return cmd_status(argc, argv);
+  }
+
   std::cerr << "Unknown command or not yet implemented: " << cmd << "\n";
   return 1;
 }

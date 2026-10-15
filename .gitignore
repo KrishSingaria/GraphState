@@ -1,5 +1,6 @@
 build/
-.graphstate/
+/.graphstate/
 benchmark_project/.graphstate/
 eval/runs/
 .codegraph/
+.agents/

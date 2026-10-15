@@ -1,0 +1,52 @@
+#pragma once
+
+#include <memory>
+#include <mutex>
+#include <string>
+#include "core/config.hpp"
+#include "db/graph_client.hpp"
+#include "index/fact_store.hpp"
+#include "index/graph_writer.hpp"
+#include "index/indexer.hpp"
+#include "index/resolver.hpp"
+
+namespace gs {
+
+class Engine {
+public:
+  explicit Engine(core::Config config);
+  ~Engine();
+
+  // Non-copyable, non-movable
+  Engine(const Engine&) = delete;
+  Engine& operator=(const Engine&) = delete;
+
+  const core::Config& config() const { return config_; }
+  core::Config& config() { return config_; }
+
+  db::GraphClient& client() { return client_; }
+  index::FactStore& fact_store() { return fact_store_; }
+  const index::FactStore& fact_store() const { return fact_store_; }
+
+  index::Resolver& resolver() { return resolver_; }
+  const index::Resolver& resolver() const { return resolver_; }
+
+  index::GraphWriter& graph_writer() { return *graph_writer_; }
+  index::Indexer& indexer() { return *indexer_; }
+
+  std::mutex& state_mutex() { return state_mu_; }
+
+  // Bootstrap schema and initialize engine metadata
+  void initialize();
+
+private:
+  core::Config config_;
+  db::GraphClient client_;
+  index::FactStore fact_store_;
+  index::Resolver resolver_;
+  std::unique_ptr<index::GraphWriter> graph_writer_;
+  std::unique_ptr<index::Indexer> indexer_;
+  std::mutex state_mu_;
+};
+
+} // namespace gs
