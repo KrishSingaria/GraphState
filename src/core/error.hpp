@@ -19,6 +19,8 @@ enum class ErrorCode {
   FILE_NOT_FOUND = 8,
   NOT_IMPLEMENTED = 9,
   TIMEOUT = 10,
+  INVALID_PARAM = 11,
+  DB_QUERY = 12,
 };
 
 inline std::string_view error_code_name(ErrorCode code) {
@@ -34,6 +36,8 @@ inline std::string_view error_code_name(ErrorCode code) {
     case ErrorCode::FILE_NOT_FOUND: return "FILE_NOT_FOUND";
     case ErrorCode::NOT_IMPLEMENTED: return "NOT_IMPLEMENTED";
     case ErrorCode::TIMEOUT: return "TIMEOUT";
+    case ErrorCode::INVALID_PARAM: return "INVALID_PARAM";
+    case ErrorCode::DB_QUERY: return "DB_QUERY";
   }
   return "UNKNOWN";
 }

@@ -55,7 +55,15 @@ int run(int argc, char* argv[]) {
     return 0;
   }
 
-  std::cerr << "Unknown command or not yet implemented in M0: " << cmd << "\n";
+  if (cmd == "doctor") {
+    return cmd_doctor(argc, argv);
+  }
+
+  if (cmd == "query") {
+    return cmd_query(argc, argv);
+  }
+
+  std::cerr << "Unknown command or not yet implemented: " << cmd << "\n";
   return 1;
 }
 
