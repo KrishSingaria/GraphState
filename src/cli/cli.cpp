@@ -91,6 +91,10 @@ int run(int argc, char* argv[]) {
     return cmd_hook(argc, argv);
   }
 
+  if (cmd == "audit") {
+    return cmd_audit(argc, argv);
+  }
+
   std::cerr << "Unknown command or not yet implemented: " << cmd << "\n";
   return 1;
 }

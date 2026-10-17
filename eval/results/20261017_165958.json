@@ -1,0 +1,56 @@
+{
+  "timestamp": "20261017_165958",
+  "model": "claude-sonnet-5-5",
+  "dry_run": true,
+  "budget_usd": 60.0,
+  "total_cost_usd": 0.18,
+  "runs_count": 2,
+  "results": [
+    {
+      "timestamp": "2026-10-17T16:59:59.326684",
+      "task_id": "T01",
+      "arm": "A",
+      "run_idx": 1,
+      "task_success": false,
+      "check_passed": false,
+      "check_message": "Parameter 'currency' must be required (found default: USD)",
+      "all_tests_passed": true,
+      "broken_refs": 0,
+      "hallucinated_calls": 0,
+      "syntax_errors": 0,
+      "audit_counts": {},
+      "audit_findings_count": 0,
+      "ts_check": false,
+      "agent": {
+        "turns": 12,
+        "input_tokens": 15000,
+        "output_tokens": 1200,
+        "cost_usd": 0.08,
+        "duration_s": 0.5
+      }
+    },
+    {
+      "timestamp": "2026-10-17T17:00:09.845214",
+      "task_id": "T01",
+      "arm": "B",
+      "run_idx": 1,
+      "task_success": false,
+      "check_passed": false,
+      "check_message": "Parameter 'currency' must be required (found default: USD)",
+      "all_tests_passed": true,
+      "broken_refs": 0,
+      "hallucinated_calls": 0,
+      "syntax_errors": 0,
+      "audit_counts": {},
+      "audit_findings_count": 0,
+      "ts_check": false,
+      "agent": {
+        "turns": 15,
+        "input_tokens": 18000,
+        "output_tokens": 1400,
+        "cost_usd": 0.1,
+        "duration_s": 0.5
+      }
+    }
+  ]
+}

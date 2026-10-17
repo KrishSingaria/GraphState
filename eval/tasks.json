@@ -1,0 +1,62 @@
+[
+  {
+    "id": "T01",
+    "category": "signature_change",
+    "prompt": "Add a required `currency: str` parameter to billing.calculate_total (after `cart`) and make every caller pass the correct currency (orders use order.currency, reports use 'USD').",
+    "check": "eval/checks/t01.py"
+  },
+  {
+    "id": "T02",
+    "category": "rename",
+    "prompt": "Rename utils.money.round_money to quantize_money everywhere.",
+    "check": "eval/checks/t02.py"
+  },
+  {
+    "id": "T03",
+    "category": "move",
+    "prompt": "Move slugify from utils/text.py into a new module utils/slugs.py and update all imports. Delete it from utils/text.py.",
+    "check": "eval/checks/t03.py"
+  },
+  {
+    "id": "T04",
+    "category": "feature_hallucination_trap",
+    "prompt": "Add a function reports.invoice_lines(order) that returns one formatted money string per line item using the project's existing money formatting helper.",
+    "check": "eval/checks/t04.py"
+  },
+  {
+    "id": "T05",
+    "category": "removal_migration",
+    "prompt": "apply_discount is deprecated. Create a Discounts class in billing/discounts.py with apply(self, code, total), migrate all callers, and remove apply_discount.",
+    "check": "eval/checks/t05.py"
+  },
+  {
+    "id": "T06",
+    "category": "method_chain",
+    "prompt": "Let Invoice.total accept an optional tax_rate keyword (default unchanged) and pass the customer's tax rate from orders.checkout through to it.",
+    "check": "eval/checks/t06.py"
+  },
+  {
+    "id": "T07",
+    "category": "greenfield",
+    "prompt": "Build a new package shop/returns with a ReturnRequest model, a returns service (create_return, approve_return) that uses existing billing and orders code, and a report function. Add it to app.py's command list.",
+    "check": "eval/checks/t07.py"
+  },
+  {
+    "id": "T08",
+    "category": "typescript",
+    "prompt": "In web/, make totalLabel's currency parameter required and update every caller to pass it explicitly.",
+    "check": "eval/checks/t08.py"
+  },
+  {
+    "id": "T09",
+    "category": "refactor_quality",
+    "prompt": "reports.build_summary is too complex. Split it into smaller helpers without changing behavior.",
+    "check": "eval/checks/t09.py"
+  },
+  {
+    "id": "T10",
+    "category": "validation",
+    "prompt": "Add input validation to orders.checkout: raise ValueError for empty carts and negative quantities. Keep existing behavior otherwise.",
+    "check": "eval/checks/t10.py"
+  }
+]

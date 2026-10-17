@@ -121,13 +121,23 @@ public:
   // Heuristic inspection
   bool is_common_name(std::string_view name) const;
 
-private:
+  // Import & class hierarchy inspection
   struct ImportBinding {
     std::string target_file;
     std::string orig_name;
     bool is_whole_module{false};
   };
 
+  std::unordered_map<std::string, ImportBinding> build_import_map(
+      const FactStore& store,
+      const lang::FileFacts& facts) const;
+
+  const lang::SymbolFact* find_method_in_class_hierarchy(
+      const FactStore& store,
+      const lang::SymbolFact* class_sym,
+      std::string_view method_name) const;
+
+private:
   std::vector<std::string> python_source_roots_{"", "src"};
   std::unordered_map<std::string, std::unordered_set<std::string>> reverse_imports_;
   std::unordered_map<std::string, std::unordered_set<std::string>> forward_imports_;
@@ -136,10 +146,6 @@ private:
   const FactStore* store_{nullptr};
 
   void init_common_names();
-
-  std::unordered_map<std::string, ImportBinding> build_import_map(
-      const FactStore& store,
-      const lang::FileFacts& facts) const;
 
   const lang::SymbolFact* find_class_symbol(
       const FactStore& store,
@@ -156,11 +162,6 @@ private:
       const lang::SymbolFact* class_sym,
       std::unordered_set<const lang::SymbolFact*>& visited,
       int depth = 0) const;
-
-  const lang::SymbolFact* find_method_in_class_hierarchy(
-      const FactStore& store,
-      const lang::SymbolFact* class_sym,
-      std::string_view method_name) const;
 
   const lang::SymbolFact* find_method_in_class_hierarchy_impl(
       const FactStore& store,
