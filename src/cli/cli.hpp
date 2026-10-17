@@ -13,5 +13,7 @@ int cmd_changeset(int argc, char* argv[]);
 int cmd_init(int argc, char* argv[]);
 int cmd_hook(int argc, char* argv[]);
 int cmd_audit(int argc, char* argv[]);
+int cmd_bench(int argc, char* argv[]);
+int cmd_forget(int argc, char* argv[]);
 
 } // namespace gs::cli

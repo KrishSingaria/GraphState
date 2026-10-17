@@ -95,6 +95,14 @@ int run(int argc, char* argv[]) {
     return cmd_audit(argc, argv);
   }
 
+  if (cmd == "bench") {
+    return cmd_bench(argc, argv);
+  }
+
+  if (cmd == "forget") {
+    return cmd_forget(argc, argv);
+  }
+
   std::cerr << "Unknown command or not yet implemented: " << cmd << "\n";
   return 1;
 }
