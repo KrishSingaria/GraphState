@@ -53,6 +53,8 @@ def run_cmd(cmd, cwd=None, env=None, timeout=None, shell=None):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=timeout,
             shell=use_shell
         )
@@ -92,9 +94,14 @@ def run_eval_task(task, arm, run_idx, args, ts, base_ws_dir, graphstate_bin):
     agent_output = {
         "turns": 0,
         "input_tokens": 0,
+        "cache_read_tokens": 0,
+        "cache_creation_tokens": 0,
         "output_tokens": 0,
         "cost_usd": 0.0,
-        "duration_s": 0.0
+        "duration_s": 0.0,
+        "session_id": None,
+        "tools_called": [],
+        "tool_counts": {}
     }
 
     if args.dry_run:
@@ -131,6 +138,9 @@ def run_eval_task(task, arm, run_idx, args, ts, base_ws_dir, graphstate_bin):
         if args.model:
             cmd.extend(["--model", args.model])
 
+        if getattr(args, "effort", None):
+            cmd.extend(["--effort", args.effort])
+
         timeout_sec = args.timeout_min * 60
         code, out, err, dur, timed_out = run_cmd(cmd, cwd=run_ws, timeout=timeout_sec)
         agent_output["duration_s"] = dur
@@ -141,8 +151,44 @@ def run_eval_task(task, arm, run_idx, args, ts, base_ws_dir, graphstate_bin):
                 agent_output["turns"] = data.get("turns", 0) or data.get("num_turns", 0)
                 usage = data.get("usage", {})
                 agent_output["input_tokens"] = usage.get("input_tokens", 0)
+                agent_output["cache_read_tokens"] = usage.get("cache_read_input_tokens", 0)
+                agent_output["cache_creation_tokens"] = usage.get("cache_creation_input_tokens", 0)
                 agent_output["output_tokens"] = usage.get("output_tokens", 0)
                 agent_output["cost_usd"] = data.get("cost_usd", 0.0) or data.get("total_cost_usd", 0.0)
+                session_id = data.get("session_id")
+                agent_output["session_id"] = session_id
+
+                tool_calls = []
+                if session_id:
+                    user_home = os.path.expanduser("~")
+                    claude_projects_dir = os.path.join(user_home, ".claude", "projects")
+                    if os.path.isdir(claude_projects_dir):
+                        for root_p, _, files_p in os.walk(claude_projects_dir):
+                            for f_p in files_p:
+                                if session_id in f_p:
+                                    jsonl_path = os.path.join(root_p, f_p)
+                                    try:
+                                        with open(jsonl_path, "r", encoding="utf-8", errors="replace") as jfh:
+                                            for line in jfh:
+                                                if not line.strip():
+                                                    continue
+                                                entry = json.loads(line)
+                                                msg = entry.get("message", {})
+                                                content = msg.get("content", [])
+                                                if isinstance(content, list):
+                                                    for blk in content:
+                                                        if isinstance(blk, dict) and blk.get("type") == "tool_use":
+                                                            tname = blk.get("name")
+                                                            if tname:
+                                                                tool_calls.append(tname)
+                                    except Exception:
+                                        pass
+                                    break
+                tool_counts = {}
+                for t in tool_calls:
+                    tool_counts[t] = tool_counts.get(t, 0) + 1
+                agent_output["tools_called"] = tool_calls
+                agent_output["tool_counts"] = tool_counts
             except Exception:
                 pass
 
@@ -229,6 +275,7 @@ def main():
     parser.add_argument("--arms", default="A,B", help="Comma-separated arms: A, B, or A,B")
     parser.add_argument("--runs", type=int, default=1, help="Number of runs per (task, arm)")
     parser.add_argument("--model", default="claude-sonnet-5-5", help="Model name")
+    parser.add_argument("--effort", default="medium", help="Effort level (low, medium, high)")
     parser.add_argument("--max-turns", type=int, default=40, help="Max turns per run")
     parser.add_argument("--timeout-min", type=int, default=15, help="Timeout in minutes per run")
     parser.add_argument("--budget-usd", type=float, default=60.0, help="Maximum budget in USD")

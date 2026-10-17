@@ -91,6 +91,17 @@ def generate_markdown_report(data, source_file):
         "|---------|----------|---------------|-------------------|---------------|-------------------|"
     ])
 
+    task_categories = {}
+    tasks_json_path = os.path.join(os.path.dirname(__file__), "tasks.json")
+    if os.path.isfile(tasks_json_path):
+        try:
+            with open(tasks_json_path, "r", encoding="utf-8") as tfh:
+                tdata = json.load(tfh)
+                for t in tdata:
+                    task_categories[t.get("id")] = t.get("category", "-")
+        except Exception:
+            pass
+
     task_ids = sorted(list({r.get("task_id") for r in results}))
     for tid in task_ids:
         runs_a = [r for r in by_arm["A"] if r.get("task_id") == tid]
@@ -100,8 +111,29 @@ def generate_markdown_report(data, source_file):
         bref_a = sum(r.get("broken_refs", 0) for r in runs_a)
         succ_b = "PASS" if any(r.get("task_success") for r in runs_b) else "FAIL"
         bref_b = sum(r.get("broken_refs", 0) for r in runs_b)
+        cat = task_categories.get(tid, "-")
 
-        lines.append(f"| {tid} | - | {succ_a} | {bref_a} | {succ_b} | {bref_b} |")
+        lines.append(f"| {tid} | `{cat}` | {succ_a} | {bref_a} | {succ_b} | {bref_b} |")
+
+    lines.extend([
+        "",
+        "## Tool Calls & Context Breakdown",
+        "",
+        "| Task ID | Arm A Tools Called | Arm B Tools Called (GraphState Gated) | Arm A Turns / Out Tokens | Arm B Turns / Out Tokens |",
+        "|---------|--------------------|---------------------------------------|--------------------------|--------------------------|"
+    ])
+
+    for tid in task_ids:
+        runs_a = [r for r in by_arm["A"] if r.get("task_id") == tid]
+        runs_b = [r for r in by_arm["B"] if r.get("task_id") == tid]
+
+        tools_a = ", ".join(f"{k} ({v})" for k, v in runs_a[0].get("agent", {}).get("tool_counts", {}).items()) if runs_a else "-"
+        tools_b = ", ".join(f"{k.replace('mcp__graphstate__', 'gs:')} ({v})" for k, v in runs_b[0].get("agent", {}).get("tool_counts", {}).items()) if runs_b else "-"
+
+        turns_a = f"{runs_a[0].get('agent', {}).get('turns', 0)} t / {runs_a[0].get('agent', {}).get('output_tokens', 0)} out" if runs_a else "-"
+        turns_b = f"{runs_b[0].get('agent', {}).get('turns', 0)} t / {runs_b[0].get('agent', {}).get('output_tokens', 0)} out" if runs_b else "-"
+
+        lines.append(f"| {tid} | {tools_a or 'None'} | {tools_b or 'None'} | {turns_a} | {turns_b} |")
 
     lines.append("")
     return "\n".join(lines)
