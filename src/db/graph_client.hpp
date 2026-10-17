@@ -30,7 +30,11 @@ public:
   GraphClient& operator=(GraphClient&& other) noexcept;
 
   // PING -> PONG. Returns true if server responds, false on connection or protocol failure.
-  bool ping();
+  // When force is false and the server recently failed, returns false immediately (circuit breaker).
+  bool ping(bool force = false);
+
+  // Clears circuit breaker state to allow immediate re-check.
+  void reset_health();
 
   // Parses column 'j' of every row for read queries returning toJSON(...) AS j.
   std::vector<nlohmann::json> rows(const std::string& graph, const Query& q);
@@ -73,6 +77,9 @@ private:
   int connect_timeout_ms_;
   int query_timeout_ms_;
   redisContext* ctx_ = nullptr;
+  bool is_alive_cached_ = true;
+  int64_t last_check_ms_ = 0;
+  int64_t backoff_interval_ms_ = 2000;
 };
 
 } // namespace gs::db

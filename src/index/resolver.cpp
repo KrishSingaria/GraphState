@@ -945,6 +945,40 @@ void Resolver::remove_file(std::string_view file) {
   reverse_imports_.erase(f);
 }
 
+void Resolver::update_file(std::string_view file, const FactStore& store) {
+  store_ = &store;
+  std::string f(file);
+  const auto* facts = store.get(file);
+  if (!facts) {
+    remove_file(file);
+    return;
+  }
+
+  update_dependencies(file, facts->imports, store);
+
+  // Remove stale symbols belonging to this file from symbols_by_name_
+  for (auto it = symbols_by_name_.begin(); it != symbols_by_name_.end(); ) {
+    auto& ids = it->second;
+    std::erase_if(ids, [&](const std::string& id) {
+      return id.starts_with(f + "::");
+    });
+    if (ids.empty()) {
+      it = symbols_by_name_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+
+  // Register current callable symbols
+  for (const auto& sym : facts->symbols) {
+    if (sym.kind == lang::SymbolKind::Function ||
+        sym.kind == lang::SymbolKind::Method ||
+        sym.kind == lang::SymbolKind::Arrow) {
+      symbols_by_name_[sym.name].push_back(sym.id);
+    }
+  }
+}
+
 void Resolver::rebuild_indices(const FactStore& store) {
   store_ = &store;
   symbols_by_name_.clear();

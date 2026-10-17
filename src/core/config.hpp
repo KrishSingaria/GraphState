@@ -64,6 +64,7 @@ struct GateConfig {
   uint64_t max_code_bytes = 1048576;
   uint64_t max_patch_bytes = 8388608;
   std::string new_file_eol = "auto";
+  std::string sync_mode = "full"; // "full" (FlushFileBuffers per patch) | "normal" (NTFS atomic rename, buffered)
 };
 
 struct MemoryConfig {

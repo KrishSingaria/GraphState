@@ -16,6 +16,7 @@ struct timeval {
 #include <cctype>
 #include <cstring>
 #include <utility>
+#include "core/clock.hpp"
 #include "core/error.hpp"
 #include "db/cypher_params.hpp"
 #include "db/result.hpp"
@@ -91,7 +92,10 @@ GraphClient::GraphClient(GraphClient&& other) noexcept
       password_(std::move(other.password_)),
       connect_timeout_ms_(other.connect_timeout_ms_),
       query_timeout_ms_(other.query_timeout_ms_),
-      ctx_(other.ctx_) {
+      ctx_(other.ctx_),
+      is_alive_cached_(other.is_alive_cached_),
+      last_check_ms_(other.last_check_ms_),
+      backoff_interval_ms_(other.backoff_interval_ms_) {
   other.ctx_ = nullptr;
 }
 
@@ -105,6 +109,9 @@ GraphClient& GraphClient::operator=(GraphClient&& other) noexcept {
     query_timeout_ms_ = other.query_timeout_ms_;
     ctx_ = other.ctx_;
     other.ctx_ = nullptr;
+    is_alive_cached_ = other.is_alive_cached_;
+    last_check_ms_ = other.last_check_ms_;
+    backoff_interval_ms_ = other.backoff_interval_ms_;
   }
   return *this;
 }
@@ -118,11 +125,14 @@ void GraphClient::connect() {
 
   ctx_ = redisConnectWithTimeout(host_.c_str(), port_, tv);
   if (!ctx_ || ctx_->err) {
+    is_alive_cached_ = false;
+    last_check_ms_ = core::now_ms();
     std::string err = ctx_ ? ctx_->errstr : "unable to allocate redis context";
     disconnect();
     throw gs::Error(ErrorCode::DB_UNAVAILABLE,
                     "FalkorDB connection failed to " + host_ + ":" + std::to_string(port_) + ": " + err);
   }
+  is_alive_cached_ = true;
 
   struct timeval qtv;
   qtv.tv_sec = static_cast<long>((query_timeout_ms_ + 1000) / 1000);
@@ -203,20 +213,34 @@ redisReply* GraphClient::execute_command(const std::vector<std::string>& argv, b
   return reply;
 }
 
-bool GraphClient::ping() {
+bool GraphClient::ping(bool force) {
+  int64_t now = core::now_ms();
+  if (!force && !is_alive_cached_ && (now - last_check_ms_ < backoff_interval_ms_)) {
+    return false;
+  }
+
+  last_check_ms_ = now;
   try {
     ensure_connected();
     void* r = redisCommand(ctx_, "PING");
     if (!r) {
+      is_alive_cached_ = false;
       return false;
     }
     redisReply* reply = static_cast<redisReply*>(r);
     bool ok = (reply->type == REDIS_REPLY_STATUS && reply->str && std::string_view(reply->str) == "PONG");
     freeReplyObject(reply);
+    is_alive_cached_ = ok;
     return ok;
   } catch (...) {
+    is_alive_cached_ = false;
     return false;
   }
+}
+
+void GraphClient::reset_health() {
+  is_alive_cached_ = true;
+  last_check_ms_ = 0;
 }
 
 std::vector<nlohmann::json> GraphClient::rows(const std::string& graph, const Query& q) {

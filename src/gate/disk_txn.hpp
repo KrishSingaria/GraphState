@@ -30,7 +30,7 @@ struct TxnState {
 
 class DiskTxn {
 public:
-  DiskTxn(std::filesystem::path root, std::string patch_id);
+  DiskTxn(std::filesystem::path root, std::string patch_id, bool durable = true);
   ~DiskTxn();
 
   DiskTxn(const DiskTxn&) = delete;
@@ -65,6 +65,7 @@ private:
   TxnState state_;
   bool committed_ = false;
   bool active_ = false;
+  bool durable_ = true;
 };
 
 } // namespace gs::gate

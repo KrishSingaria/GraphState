@@ -1458,7 +1458,8 @@ void Gate::p6_write(const std::string& patch_id,
       {"duration_ms", 0}
   };
 
-  DiskTxn txn(engine_.config().root, patch_id);
+  bool durable = (engine_.config().gate.sync_mode != "normal");
+  DiskTxn txn(engine_.config().root, patch_id, durable);
   txn.prepare(txn_files, created_dirs, post_contents, decision_payload);
   txn.commit();
 
@@ -1470,7 +1471,17 @@ void Gate::p6_write(const std::string& patch_id,
       engine_.fact_store().put(std::move(buf.post_facts));
     }
   }
-  engine_.resolver().rebuild_indices(engine_.fact_store());
+  if (ws.size() <= 4) {
+    for (const auto& [f, buf] : ws) {
+      if (buf.is_deleted) {
+        engine_.resolver().remove_file(f);
+      } else {
+        engine_.resolver().update_file(f, engine_.fact_store());
+      }
+    }
+  } else {
+    engine_.resolver().rebuild_indices(engine_.fact_store());
+  }
 
   // Update FalkorDB graph
   if (engine_.client().ping()) {

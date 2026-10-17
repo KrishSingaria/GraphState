@@ -32,8 +32,8 @@ struct FileStat {
 };
 
 FileStat stat(const fs::path& p);
-void write_file_durable(const fs::path& p, std::string_view bytes);
-void replace_file(const fs::path& src_tmp, const fs::path& dst);
+void write_file_durable(const fs::path& p, std::string_view bytes, bool sync = true);
+void replace_file(const fs::path& src_tmp, const fs::path& dst, bool write_through = true);
 void remove_file(const fs::path& p);
 void fsync_dir(const fs::path& dir);
 bool hardlink_or_copy(const fs::path& from, const fs::path& to);

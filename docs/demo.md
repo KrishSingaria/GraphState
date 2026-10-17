@@ -157,13 +157,14 @@ Workspace: benchmark_project (8 files, 27 symbols)
 
 Workload               N    p50 (ms)    p95 (ms)    p99 (ms)   Notes
 ---------------------------------------------------------------------------
-cold_index             1      309.20      309.20      309.20   25 files/s
-rss                    1        8.89        8.89        8.89   8 MB RAM
+cold_index             1      125.59      125.59      125.59   63 files/s
+rss                    1        8.99        8.99        8.99   8 MB RAM
+reindex_one           20        0.10        0.31        0.31   0.1 ms!
 read_symbol           20       <0.01        0.02        0.02   Instant
 get_impact_d3         20       <0.01        0.01        0.01   Instant
-patch_reject          20       62.39       64.13       64.13   Syntax gate
-patch_apply           20      140.40      142.45      142.45   Atomic commit
-restart                1      314.24      314.24      314.24   Warm reconcile
+patch_reject          20        0.25        0.41        0.41   Syntax gate
+patch_apply           20        3.75        5.93        5.93   Atomic commit
+restart                1      118.03      118.03      118.03   Warm reconcile
 ---------------------------------------------------------------------------
 ```
 

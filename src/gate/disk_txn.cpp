@@ -10,12 +10,13 @@
 
 namespace gs::gate {
 
-DiskTxn::DiskTxn(std::filesystem::path root, std::string patch_id)
+DiskTxn::DiskTxn(std::filesystem::path root, std::string patch_id, bool durable)
     : root_(std::move(root)),
       patch_id_(std::move(patch_id)),
       wal_dir_(root_ / ".graphstate" / "wal"),
       backup_dir_(wal_dir_ / patch_id_),
-      journal_path_(wal_dir_ / (patch_id_ + ".json")) {
+      journal_path_(wal_dir_ / (patch_id_ + ".json")),
+      durable_(durable) {
   state_.patch_id = patch_id_;
 }
 
@@ -55,9 +56,11 @@ void DiskTxn::write_journal(std::string_view state) {
 
   std::string content = j.dump(2);
   std::filesystem::path tmp_journal = wal_dir_ / (patch_id_ + ".tmp");
-  platform::write_file_durable(tmp_journal, content);
-  platform::replace_file(tmp_journal, journal_path_);
-  platform::fsync_dir(wal_dir_);
+  platform::write_file_durable(tmp_journal, content, durable_);
+  platform::replace_file(tmp_journal, journal_path_, durable_);
+  if (durable_) {
+    platform::fsync_dir(wal_dir_);
+  }
 }
 
 void DiskTxn::prepare(const std::vector<TxnFile>& files,
@@ -95,7 +98,7 @@ void DiskTxn::prepare(const std::vector<TxnFile>& files,
 
       auto it = post_contents.find(f.path);
       if (it != post_contents.end()) {
-        platform::write_file_durable(tmp, it->second);
+        platform::write_file_durable(tmp, it->second, durable_);
 
         // Preserve file permissions if file previously existed
         if (f.op == "modified") {
@@ -111,7 +114,7 @@ void DiskTxn::prepare(const std::vector<TxnFile>& files,
 
       auto it = post_contents.find(f.to_path);
       if (it != post_contents.end()) {
-        platform::write_file_durable(tmp, it->second);
+        platform::write_file_durable(tmp, it->second, durable_);
       }
     }
   }
@@ -132,7 +135,7 @@ void DiskTxn::commit() {
     if (f.op == "modified" || f.op == "created") {
       std::filesystem::path tmp = root_ / platform::from_utf8(f.tmp_path);
       std::filesystem::path dst = root_ / platform::from_utf8(f.path);
-      platform::replace_file(tmp, dst);
+      platform::replace_file(tmp, dst, durable_);
       touched_dirs.push_back(dst.parent_path());
     } else if (f.op == "deleted") {
       std::filesystem::path dst = root_ / platform::from_utf8(f.path);
@@ -142,15 +145,17 @@ void DiskTxn::commit() {
       std::filesystem::path src = root_ / platform::from_utf8(f.path);
       std::filesystem::path tmp = root_ / platform::from_utf8(f.tmp_path);
       std::filesystem::path dst = root_ / platform::from_utf8(f.to_path);
-      platform::replace_file(tmp, dst);
+      platform::replace_file(tmp, dst, durable_);
       platform::remove_file(src);
       touched_dirs.push_back(src.parent_path());
       touched_dirs.push_back(dst.parent_path());
     }
   }
 
-  for (const auto& d : touched_dirs) {
-    platform::fsync_dir(d);
+  if (durable_) {
+    for (const auto& d : touched_dirs) {
+      platform::fsync_dir(d);
+    }
   }
 
   // Step 7: set state RENAMED

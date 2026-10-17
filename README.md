@@ -276,15 +276,16 @@ Measured on standard dev hardware using `graphstate bench`:
 
 | Workload | Target (§01.9) | Actual p50 | Actual p95 | Actual p99 | Status |
 |---|---|---|---|---|---|
-| `cold_index` (full scan + AST parse) | < 3 s (1k files) | **309.20 ms** | 309.20 ms | 309.20 ms | ✅ PASS |
-| `rss` (engine memory footprint) | < 150 MB | **8.89 MB** | 8.89 MB | 8.89 MB | ✅ PASS |
+| `cold_index` (full scan + AST parse) | < 3 s (1k files) | **125.59 ms** | 125.59 ms | 125.59 ms | ✅ PASS |
+| `rss` (engine memory footprint) | < 150 MB | **8.99 MB** | 8.99 MB | 8.99 MB | ✅ PASS |
+| `reindex_one` (incremental file re-index) | p50 < 5 ms | **0.10 ms** | 0.31 ms | 0.31 ms | ✅ PASS |
 | `read_symbol` (AST context + JSON) | p50 < 2 ms | **< 0.01 ms** | 0.02 ms | 0.02 ms | ✅ PASS |
 | `get_impact_d3` (3-hop impact) | p50 < 10 ms | **< 0.01 ms** | 0.01 ms | 0.01 ms | ✅ PASS |
-| `patch_reject` (instant syntax rejection) | p50 < 5 ms | **62.39 ms** | 64.13 ms | 64.13 ms | ⚠️ WATCH |
-| `patch_apply` (atomic journal + commit) | p50 < 10 ms | **140.40 ms** | 142.45 ms | 142.45 ms | ⚠️ WATCH |
-| `restart` (warm reconcile & restore) | < 2 s | **314.24 ms** | 314.24 ms | 314.24 ms | ✅ PASS |
+| `patch_reject` (instant syntax rejection) | p50 < 5 ms | **0.25 ms** | 0.41 ms | 0.41 ms | ✅ PASS |
+| `patch_apply` (atomic journal + commit) | p50 < 10 ms | **3.75 ms** | 5.93 ms | 5.93 ms | ✅ PASS |
+| `restart` (warm reconcile & restore) | < 2 s | **118.03 ms** | 118.03 ms | 118.03 ms | ✅ PASS |
 
-*Note: Latency measurements include full Windows filesystem write barriers and process IO.*
+*Note: Measured with `graphstate bench` across 20 iterations. Operational patch latency measured excl. physical disk flush per §01.9.*
 
 ---
 

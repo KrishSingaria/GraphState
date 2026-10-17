@@ -167,7 +167,7 @@ FileStat stat(const fs::path& p) {
   return res;
 }
 
-void write_file_durable(const fs::path& p, std::string_view bytes) {
+void write_file_durable(const fs::path& p, std::string_view bytes, bool sync) {
   std::wstring wp = p.wstring();
   HANDLE h = CreateFileW(
       wp.c_str(),
@@ -197,21 +197,28 @@ void write_file_durable(const fs::path& p, std::string_view bytes) {
     remaining -= written;
   }
 
-  if (!FlushFileBuffers(h)) {
-    DWORD err = GetLastError();
-    CloseHandle(h);
-    throw Error(ErrorCode::WRITE_FAILED, "failed to flush file: " + to_utf8(p), {{"winerr", static_cast<int>(err)}});
+  if (sync) {
+    if (!FlushFileBuffers(h)) {
+      DWORD err = GetLastError();
+      CloseHandle(h);
+      throw Error(ErrorCode::WRITE_FAILED, "failed to flush file: " + to_utf8(p), {{"winerr", static_cast<int>(err)}});
+    }
   }
   CloseHandle(h);
 }
 
-void replace_file(const fs::path& src_tmp, const fs::path& dst) {
+void replace_file(const fs::path& src_tmp, const fs::path& dst, bool write_through) {
   std::wstring wsrc = src_tmp.wstring();
   std::wstring wdst = dst.wstring();
 
+  DWORD flags = MOVEFILE_REPLACE_EXISTING;
+  if (write_through) {
+    flags |= MOVEFILE_WRITE_THROUGH;
+  }
+
   DWORD last_err = 0;
   for (int retry = 0; retry < 20; ++retry) {
-    if (MoveFileExW(wsrc.c_str(), wdst.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+    if (MoveFileExW(wsrc.c_str(), wdst.c_str(), flags)) {
       return;
     }
     last_err = GetLastError();

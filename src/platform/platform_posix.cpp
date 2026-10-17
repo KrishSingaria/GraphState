@@ -126,7 +126,7 @@ FileStat stat(const fs::path& p) {
   return res;
 }
 
-void write_file_durable(const fs::path& p, std::string_view bytes) {
+void write_file_durable(const fs::path& p, std::string_view bytes, bool sync) {
   int fd = open(p.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
   if (fd < 0) {
     throw Error(ErrorCode::WRITE_FAILED, "failed to open file for durable write: " + to_utf8(p), {{"errno", errno}});
@@ -143,14 +143,16 @@ void write_file_durable(const fs::path& p, std::string_view bytes) {
     ptr += n;
     remaining -= n;
   }
-  if (fsync(fd) != 0) {
-    close(fd);
-    throw Error(ErrorCode::WRITE_FAILED, "failed to fsync file: " + to_utf8(p), {{"errno", errno}});
+  if (sync) {
+    if (fsync(fd) != 0) {
+      close(fd);
+      throw Error(ErrorCode::WRITE_FAILED, "failed to fsync file: " + to_utf8(p), {{"errno", errno}});
+    }
   }
   close(fd);
 }
 
-void replace_file(const fs::path& src_tmp, const fs::path& dst) {
+void replace_file(const fs::path& src_tmp, const fs::path& dst, bool /*write_through*/) {
   if (rename(src_tmp.c_str(), dst.c_str()) != 0) {
     throw Error(ErrorCode::WRITE_FAILED, "failed to replace file: " + to_utf8(dst), {{"errno", errno}});
   }

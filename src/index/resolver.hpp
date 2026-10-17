@@ -116,6 +116,7 @@ public:
       std::string_view file,
       const std::vector<lang::ImportFact>& imports);
   void remove_file(std::string_view file);
+  void update_file(std::string_view file, const FactStore& store);
   void rebuild_indices(const FactStore& store);
 
   // Heuristic inspection

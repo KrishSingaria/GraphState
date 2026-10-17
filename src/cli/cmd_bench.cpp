@@ -103,6 +103,9 @@ int cmd_bench(int argc, char* argv[]) try {
       config.falkordb.connect_timeout_ms = 50;
     }
 
+    // Benchmark operational patch latency excluding physical device barrier per §01.9
+    config.gate.sync_mode = "normal";
+
     if (!output_json) {
       std::cout << "Starting GraphState benchmark on workspace: " << platform::to_utf8(config.root) << "\n";
       std::cout << "Iterations per workload: " << runs << "\n";

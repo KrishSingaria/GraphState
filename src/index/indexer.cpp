@@ -219,7 +219,16 @@ IndexReport Indexer::reindex(const std::vector<std::string>& files, std::string_
   report.changed = changed.size();
   report.deleted = deleted.size();
 
-  engine_.resolver().rebuild_indices(engine_.fact_store());
+  if (changed.size() + deleted.size() <= 4) {
+    for (const auto& f : changed) {
+      engine_.resolver().update_file(f, engine_.fact_store());
+    }
+    for (const auto& f : deleted) {
+      engine_.resolver().remove_file(f);
+    }
+  } else {
+    engine_.resolver().rebuild_indices(engine_.fact_store());
+  }
 
   if (engine_.client().ping()) {
     if (!deleted.empty()) {
