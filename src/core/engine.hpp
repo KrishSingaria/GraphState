@@ -12,6 +12,7 @@
 
 namespace gs::gate {
 class Gate;
+class Changesets;
 }
 
 namespace gs::memory {
@@ -46,6 +47,9 @@ public:
   gate::Gate& gate() { return *gate_; }
   const gate::Gate& gate() const { return *gate_; }
 
+  gate::Changesets& changesets() { return *changesets_; }
+  const gate::Changesets& changesets() const { return *changesets_; }
+
   memory::Sessions& sessions() { return *sessions_; }
   const memory::Sessions& sessions() const { return *sessions_; }
 
@@ -65,6 +69,7 @@ private:
   std::unique_ptr<index::GraphWriter> graph_writer_;
   std::unique_ptr<index::Indexer> indexer_;
   std::unique_ptr<gate::Gate> gate_;
+  std::unique_ptr<gate::Changesets> changesets_;
   std::unique_ptr<memory::Sessions> sessions_;
   std::unique_ptr<memory::MemoryStore> memory_store_;
   std::mutex state_mu_;

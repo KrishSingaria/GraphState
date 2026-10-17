@@ -1,0 +1,13 @@
+> {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test-runner","version":"1.0"}}}
+< {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-11-25","serverInfo":{"name":"graphstate"}}}
+> {"jsonrpc":"2.0","method":"notifications/initialized"}
+> {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"changeset","arguments":{"action":"begin","intent":"Build order feature"}}}
+< {"jsonrpc":"2.0","id":2,"result":{"isError":false,"structuredContent":{"status":"OPEN"}}}
+> {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"propose_patch","arguments":{"intent":"Add routes","reasoning":"Calls services","dry_run":false,"edits":[{"op":"create_file","file":"routes.py","content":"from services import create_order\n\ndef post_order():\n    return create_order()\n"}]}}}
+< {"jsonrpc":"2.0","id":3,"result":{"isError":false,"structuredContent":{"status":"APPLIED","changeset":{"status":"OPEN","open_obligations":1}}}}
+> {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"changeset","arguments":{"action":"finalize"}}}
+< {"jsonrpc":"2.0","id":4,"result":{"isError":false,"structuredContent":{"status":"OPEN","open_obligations":1}}}
+> {"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"propose_patch","arguments":{"intent":"Add services","reasoning":"Implement create_order","dry_run":false,"edits":[{"op":"create_file","file":"services.py","content":"def create_order():\n    return 42\n"}]}}}
+< {"jsonrpc":"2.0","id":5,"result":{"isError":false,"structuredContent":{"status":"APPLIED","changeset":{"status":"OPEN","open_obligations":0}}}}
+> {"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"changeset","arguments":{"action":"finalize"}}}
+< {"jsonrpc":"2.0","id":6,"result":{"isError":false,"structuredContent":{"status":"CLOSED"}}}

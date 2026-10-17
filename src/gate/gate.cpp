@@ -13,6 +13,7 @@
 #include "core/text.hpp"
 #include "core/clock.hpp"
 #include "db/queries.hpp"
+#include "gate/changesets.hpp"
 #include "gate/disk_txn.hpp"
 #include "lang/binding.hpp"
 #include "lang/extractor.hpp"
@@ -204,17 +205,49 @@ PatchResult Gate::propose(const PatchRequest& req, const memory::SessionCtx& ses
   result.changes = changes;
   result.warnings = warnings;
 
+  auto cs_opt = engine_.changesets().current();
+  bool in_changeset = cs_opt.has_value() && cs_opt->status == "OPEN";
+
+  std::vector<Violation> blocking_violations;
+  std::vector<Violation> deferred_violations;
+
+  if (in_changeset) {
+    for (auto& v : violations) {
+      if (Changesets::is_deferrable_code(v.code)) {
+        deferred_violations.push_back(std::move(v));
+      } else {
+        blocking_violations.push_back(std::move(v));
+      }
+    }
+  } else {
+    blocking_violations = std::move(violations);
+  }
+
   // Check for blocking errors
-  if (!violations.empty()) {
+  if (!blocking_violations.empty()) {
     result.status = PatchStatus::Rejected;
     result.failed_phase = "BLAST_RADIUS";
-    for (const auto& v : violations) {
+    for (const auto& v : blocking_violations) {
       if (v.phase == "QUALITY") {
         result.failed_phase = "QUALITY";
         break;
       }
     }
-    result.violations = std::move(violations);
+    result.violations = std::move(blocking_violations);
+
+    if (!in_changeset) {
+      bool all_deferrable = true;
+      for (const auto& v : result.violations) {
+        if (!Changesets::is_deferrable_code(v.code)) {
+          all_deferrable = false;
+          break;
+        }
+      }
+      if (all_deferrable) {
+        result.suggestion = "This looks like incremental building. Open a changeset (changeset {action:'begin', intent}) to apply now and track these as obligations, or include the missing pieces in this patch.";
+      }
+    }
+
     record_rejected(result.patch_id, req, session, *result.failed_phase, result.violations, ws);
     auto t_end = std::chrono::steady_clock::now();
     result.timings_ms["total"] = std::chrono::duration<double, std::milli>(t_end - t_start).count();
@@ -232,8 +265,56 @@ PatchResult Gate::propose(const PatchRequest& req, const memory::SessionCtx& ses
   // Phase 6: Write
   auto t6_start = std::chrono::steady_clock::now();
   try {
+    if (in_changeset) {
+      std::vector<std::string> touched_paths;
+      for (const auto& [f, _] : ws) touched_paths.push_back(f);
+      engine_.changesets().before_write(touched_paths);
+    }
+
     p6_write(result.patch_id, req, session, ws, changes);
     result.status = PatchStatus::Applied;
+
+    if (in_changeset) {
+      std::vector<std::pair<std::string, std::string>> path_hashes;
+      for (const auto& [f, buf] : ws) {
+        std::string post_h = "";
+        if (buf.post.has_value() && !buf.is_deleted) {
+          post_h = core::xxh3_hex(*buf.post);
+        }
+        path_hashes.push_back({f, post_h});
+      }
+      engine_.changesets().after_write(path_hashes);
+
+      if (engine_.client().ping()) {
+        try {
+          engine_.client().rows(engine_.config().project_graph(), db::Query{
+              .name = "changeset_link_decision",
+              .cypher = db::Q_CHANGESET_LINK_DECISION,
+              .params = {
+                  {"id", cs_opt->id},
+                  {"patch_id", result.patch_id}
+              },
+              .read_only = false
+          });
+        } catch (...) {}
+      }
+
+      ChangesetState cs_state = engine_.changesets().recompute();
+      nlohmann::json cs_json = {
+          {"id", cs_state.id},
+          {"intent", cs_state.intent},
+          {"status", cs_state.status},
+          {"files", cs_state.files},
+          {"open_obligations", cs_state.obligations.size()}
+      };
+      nlohmann::json obs_arr = nlohmann::json::array();
+      for (size_t i = 0; i < cs_state.obligations.size() && i < 20; ++i) {
+        obs_arr.push_back(to_json(cs_state.obligations[i]));
+      }
+      cs_json["obligations"] = std::move(obs_arr);
+      cs_json["discharged"] = cs_state.discharged;
+      result.changeset = std::move(cs_json);
+    }
   } catch (const gs::Error& err) {
     result.status = PatchStatus::Rejected;
     result.failed_phase = "WRITE";
@@ -1037,10 +1118,9 @@ void Gate::p4_blast_radius(const std::map<std::string, Buffer>& ws,
                            const std::vector<std::string>& targets,
                            std::vector<Violation>& violations,
                            std::vector<Violation>& warnings) {
-  if (targets.empty()) return;
-
-  std::vector<std::string> exclude_files;
-  for (const auto& [f, _] : ws) exclude_files.push_back(f);
+  if (!targets.empty()) {
+    std::vector<std::string> exclude_files;
+    for (const auto& [f, _] : ws) exclude_files.push_back(f);
 
   // 1. Callers of changed/removed targets from FalkorDB graph
   nlohmann::json caller_rows = nlohmann::json::array();
@@ -1172,6 +1252,7 @@ void Gate::p4_blast_radius(const std::map<std::string, Buffer>& ws,
       });
     }
   }
+  }
 
   // 4. Outgoing references & Anti-hallucination checks
   for (const auto& [f, buf] : ws) {
@@ -1207,7 +1288,27 @@ void Gate::p4_blast_radius(const std::map<std::string, Buffer>& ws,
           }
         }
 
-        if (mod_file.empty() && (imp.spec.starts_with(".") || imp.spec.starts_with("/"))) {
+        bool should_check_missing = imp.spec.starts_with(".") || imp.spec.starts_with("/");
+        if (!should_check_missing && buf.lang == lang::Language::Python) {
+          static const std::unordered_set<std::string_view> PY_STDLIB = {
+            "os", "sys", "re", "math", "json", "time", "datetime", "typing", "collections",
+            "itertools", "functools", "pathlib", "unittest", "logging", "shutil", "tempfile",
+            "hashlib", "random", "string", "subprocess", "threading", "multiprocessing", "asyncio",
+            "socket", "http", "urllib", "email", "io", "csv", "sqlite3", "copy", "inspect",
+            "abc", "enum", "dataclasses", "contextlib", "decimal", "fractions", "operator", "types",
+            "warnings", "traceback", "sysconfig", "platform", "ctypes", "struct", "pickle", "uuid",
+            "doctest", "difflib", "calendar", "glob", "fnmatch", "gzip", "bz2", "lzma", "zipfile",
+            "tarfile", "concurrent", "queue", "base64", "binascii", "quopri", "html", "xml"
+          };
+          std::string_view top_mod = imp.spec;
+          size_t dot = top_mod.find('.');
+          if (dot != std::string_view::npos) top_mod = top_mod.substr(0, dot);
+          if (!PY_STDLIB.contains(top_mod)) {
+            should_check_missing = true;
+          }
+        }
+
+        if (mod_file.empty() && should_check_missing) {
           violations.push_back(Violation{
               .code = "MISSING_MODULE",
               .severity = Severity::Error,
@@ -1557,6 +1658,18 @@ std::vector<nlohmann::json> Gate::fetch_lessons(const std::vector<std::string>& 
   } catch (...) {}
 
   return lessons;
+}
+
+std::vector<Violation> Gate::audit_cumulative(std::map<std::string, Buffer>& ws) {
+  std::vector<FileChange> changes;
+  std::vector<std::string> targets;
+  std::vector<Violation> warnings;
+  std::vector<Violation> violations;
+
+  p3_symbol_diff(ws, changes, targets, warnings);
+  p4_blast_radius(ws, targets, violations, warnings);
+
+  return violations;
 }
 
 } // namespace gs::gate

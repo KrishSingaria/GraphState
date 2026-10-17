@@ -79,6 +79,10 @@ int run(int argc, char* argv[]) {
     return cmd_status(argc, argv);
   }
 
+  if (cmd == "changeset") {
+    return cmd_changeset(argc, argv);
+  }
+
   std::cerr << "Unknown command or not yet implemented: " << cmd << "\n";
   return 1;
 }

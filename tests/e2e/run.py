@@ -146,25 +146,24 @@ def main():
         print(f"Error: no .jsonl test scripts found in {scripts_dir}", file=sys.stderr)
         return 1
 
-    tmp_dir = tempfile.mkdtemp(prefix="gs_e2e_")
-    try:
-        workspace = os.path.join(tmp_dir, "benchmark_project")
-        shutil.copytree(fixtures_path, workspace)
-
-        passed = 0
-        failed = 0
-        for s in script_files:
+    passed = 0
+    failed = 0
+    for s in script_files:
+        tmp_dir = tempfile.mkdtemp(prefix="gs_e2e_")
+        try:
+            workspace = os.path.join(tmp_dir, "benchmark_project")
+            shutil.copytree(fixtures_path, workspace)
             if run_script(bin_path, workspace, s):
                 passed += 1
             else:
                 failed += 1
+        finally:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
 
-        print(f"\n==========================================")
-        print(f"E2E Summary: {passed} passed, {failed} failed")
-        print(f"==========================================")
-        return 0 if failed == 0 else 1
-    finally:
-        shutil.rmtree(tmp_dir, ignore_errors=True)
+    print(f"\n==========================================")
+    print(f"E2E Summary: {passed} passed, {failed} failed")
+    print(f"==========================================")
+    return 0 if failed == 0 else 1
 
 
 if __name__ == "__main__":

@@ -110,6 +110,12 @@ gs_apply_warnings(test_memory_db)
 add_test(NAME test_memory_db COMMAND test_memory_db)
 set_tests_properties(test_memory_db PROPERTIES LABELS "db")
 
+add_executable(test_changesets integration/test_changesets.cpp)
+target_link_libraries(test_changesets PRIVATE graphstate_core doctest::doctest)
+gs_apply_warnings(test_changesets)
+add_test(NAME test_changesets COMMAND test_changesets)
+set_tests_properties(test_changesets PROPERTIES LABELS "unit")
+
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
   add_test(NAME test_mcp_e2e

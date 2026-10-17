@@ -36,6 +36,8 @@ public:
 
   PatchResult propose(const PatchRequest& req, const memory::SessionCtx& session = {});
 
+  std::vector<Violation> audit_cumulative(std::map<std::string, Buffer>& ws);
+
   const RulesEngine& rules_engine() const { return rules_engine_; }
   RulesEngine& rules_engine() { return rules_engine_; }
 

@@ -119,6 +119,10 @@ nlohmann::json to_json(const PatchResult& r) {
     res["suggestion"] = *r.suggestion;
   }
 
+  if (r.changeset.has_value()) {
+    res["changeset"] = *r.changeset;
+  }
+
   return res;
 }
 

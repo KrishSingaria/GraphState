@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <sstream>
 #include "core/engine.hpp"
+#include "gate/changesets.hpp"
 #include "gate/gate.hpp"
 #include "gate/patch.hpp"
 #include "memory/session_ctx.hpp"
@@ -89,6 +90,11 @@ void register_write_tools(ToolRegistry& reg) {
           std::ostringstream oss;
           oss << "APPLIED " << files_count << " files, " << symbols_count << " symbols changed (patch "
               << patch_id << ") in " << std::fixed << std::setprecision(1) << total_ms << " ms";
+          if (j.contains("changeset") && j["changeset"].is_object()) {
+            int obs = j["changeset"].value("open_obligations", 0);
+            std::string cs_id = j["changeset"].value("id", "");
+            oss << " [" << obs << " obligations in changeset " << cs_id << "]";
+          }
           return oss.str();
         }
 
@@ -125,8 +131,78 @@ void register_write_tools(ToolRegistry& reg) {
           {"idempotentHint", false},
           {"openWorldHint", false}
       },
-      .handler = [](ToolContext&, const nlohmann::json&) -> nlohmann::json {
-        throw ToolError("NOT_IMPLEMENTED", "changeset is implemented in milestone M5b");
+      .handler = [](ToolContext& ctx, const nlohmann::json& args) -> nlohmann::json {
+        std::string action = args.value("action", "");
+        if (action.empty()) {
+          throw ToolError("INVALID_ARGUMENTS", "'action' is required");
+        }
+
+        if (action == "begin") {
+          std::string intent = args.value("intent", "");
+          if (intent.empty()) {
+            throw ToolError("INVALID_ARGUMENTS", "'intent' is required for action 'begin'");
+          }
+          gate::ChangesetState st = ctx.engine.changesets().begin(intent, ctx.session);
+          return gate::to_json(st);
+        }
+
+        if (action == "status") {
+          auto st_opt = ctx.engine.changesets().current();
+          if (!st_opt.has_value() || st_opt->status != "OPEN") {
+            throw ToolError("NO_OPEN_CHANGESET", "No changeset is currently open");
+          }
+          return gate::to_json(*st_opt);
+        }
+
+        if (action == "finalize") {
+          gate::ChangesetState st = ctx.engine.changesets().finalize(ctx.session, false);
+          if (st.status == "OPEN") {
+            nlohmann::json j = {
+                {"id", st.id},
+                {"status", "OPEN"},
+                {"open_obligations", st.obligations.size()}
+            };
+            nlohmann::json obs = nlohmann::json::array();
+            for (const auto& o : st.obligations) {
+              obs.push_back(gate::to_json(o));
+            }
+            j["obligations"] = std::move(obs);
+            return j;
+          }
+          return {{"id", st.id}, {"status", "CLOSED"}};
+        }
+
+        if (action == "abandon") {
+          gate::ChangesetState st = ctx.engine.changesets().abandon(ctx.session, false);
+          if (!st.conflicts.empty()) {
+            return {
+                {"status", "OPEN"},
+                {"conflicts", st.conflicts},
+                {"message", st.message}
+            };
+          }
+          return {{"id", st.id}, {"status", "ABANDONED"}};
+        }
+
+        throw ToolError("INVALID_ACTION", "Unknown changeset action: " + action);
+      },
+      .render = [](const nlohmann::json& j) -> std::string {
+        std::string status = j.value("status", "");
+        std::string id = j.value("id", "");
+        if (status == "CLOSED") {
+          return "Changeset " + id + " CLOSED (all obligations satisfied).";
+        }
+        if (status == "ABANDONED") {
+          return "Changeset " + id + " ABANDONED (all files restored to base).";
+        }
+        if (j.contains("conflicts")) {
+          return "Changeset conflict: " + j.value("message", "files changed outside changeset.");
+        }
+        int open_obs = j.value("open_obligations", 0);
+        std::string intent = j.value("intent", "");
+        std::string out = "Changeset " + id + " OPEN: " + std::to_string(open_obs) + " obligations.";
+        if (!intent.empty()) out += " Intent: " + intent;
+        return out;
       }
   });
 }

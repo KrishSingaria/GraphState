@@ -104,6 +104,7 @@ struct PatchResult {
   std::vector<nlohmann::json> lessons;    // past pitfalls relevant to touched symbols
   std::map<std::string, double> timings_ms; // "p0".."p6","total"
   std::optional<std::string> suggestion;
+  std::optional<nlohmann::json> changeset;
 };
 
 nlohmann::json to_json(const Location& loc);
