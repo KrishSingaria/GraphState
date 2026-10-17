@@ -128,6 +128,18 @@ gs_apply_warnings(test_restart)
 add_test(NAME test_restart COMMAND test_restart)
 set_tests_properties(test_restart PROPERTIES LABELS "db")
 
+add_executable(test_init unit/test_init.cpp)
+target_link_libraries(test_init PRIVATE graphstate_core doctest::doctest)
+gs_apply_warnings(test_init)
+add_test(NAME test_init COMMAND test_init)
+set_tests_properties(test_init PROPERTIES LABELS "unit")
+
+add_executable(test_hook unit/test_hook.cpp)
+target_link_libraries(test_hook PRIVATE graphstate_core doctest::doctest)
+gs_apply_warnings(test_hook)
+add_test(NAME test_hook COMMAND test_hook)
+set_tests_properties(test_hook PROPERTIES LABELS "unit")
+
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
   add_test(NAME test_mcp_e2e

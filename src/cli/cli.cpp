@@ -83,6 +83,14 @@ int run(int argc, char* argv[]) {
     return cmd_changeset(argc, argv);
   }
 
+  if (cmd == "init") {
+    return cmd_init(argc, argv);
+  }
+
+  if (cmd == "hook") {
+    return cmd_hook(argc, argv);
+  }
+
   std::cerr << "Unknown command or not yet implemented: " << cmd << "\n";
   return 1;
 }
