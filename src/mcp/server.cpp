@@ -8,6 +8,7 @@
 #include "core/hash.hpp"
 #include "mcp/instructions.inc"
 #include "mcp/schema_validate.hpp"
+#include "memory/sessions.hpp"
 
 #ifndef GS_VERSION
 #define GS_VERSION "0.1.0"
@@ -38,16 +39,10 @@ const std::vector<std::string> ALL_SUPPORTED_VERSIONS = {
     "2024-11-05"
 };
 
-std::string generate_session_id() {
-  auto now = core::now_ms();
-  std::string raw = std::to_string(now) + "_" + std::to_string(reinterpret_cast<uintptr_t>(&now));
-  return "s_" + core::hash_bytes(raw).substr(0, 12);
-}
-
 } // namespace
 
 Server::Server(Engine& engine, Transport& transport)
-    : engine_(engine), transport_(transport), session_id_(generate_session_id()) {
+    : engine_(engine), transport_(transport), session_id_(engine_.sessions().ctx().session_id) {
   register_read_tools(registry_);
   register_admin_tools(registry_);
   register_write_tools(registry_);
@@ -69,6 +64,8 @@ void Server::run() {
       transport_.send_json(*resp);
     }
   }
+
+  engine_.sessions().end_on_shutdown();
 }
 
 std::optional<nlohmann::json> Server::handle_message(const nlohmann::json& msg) {
@@ -150,6 +147,13 @@ std::optional<nlohmann::json> Server::handle_message(const nlohmann::json& msg) 
 nlohmann::json Server::on_initialize(const nlohmann::json& id, const nlohmann::json& params) {
   era_ = Era::Legacy;
 
+  if (params.is_object() && params.contains("clientInfo")) {
+    engine_.sessions().ensure(params["clientInfo"]);
+  } else {
+    engine_.sessions().ensure(nlohmann::json::object());
+  }
+  session_id_ = engine_.sessions().ctx().session_id;
+
   std::string requested_version = "2025-11-25";
   if (params.is_object() && params.contains("protocolVersion") && params["protocolVersion"].is_string()) {
     std::string v = params["protocolVersion"].get<std::string>();
@@ -181,6 +185,9 @@ nlohmann::json Server::on_initialize(const nlohmann::json& id, const nlohmann::j
 
 nlohmann::json Server::on_discover(const nlohmann::json& id, const nlohmann::json&) {
   era_ = Era::Modern;
+
+  engine_.sessions().ensure(nlohmann::json{{"name", "modern-client"}});
+  session_id_ = engine_.sessions().ctx().session_id;
 
   nlohmann::json result = {
       {"resultType", "complete"},
@@ -248,7 +255,8 @@ nlohmann::json Server::on_tools_call(const nlohmann::json& id, const nlohmann::j
     return decorate_result({{"jsonrpc", "2.0"}, {"id", id}, {"result", tool_err_res}}, false);
   }
 
-  ToolContext ctx{engine_, session_id_};
+  engine_.sessions().heartbeat();
+  ToolContext ctx{engine_, engine_.sessions().ctx(), engine_.sessions().ctx().session_id};
   nlohmann::json tool_result;
 
   try {

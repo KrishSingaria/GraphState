@@ -2,6 +2,9 @@
 #include <string_view>
 #include <nlohmann/json.hpp>
 #include "core/engine.hpp"
+#include "gate/gate.hpp"
+#include "memory/briefing.hpp"
+#include "memory/sessions.hpp"
 
 namespace gs::mcp {
 
@@ -28,13 +31,13 @@ nlohmann::json handle_resources_list() {
 
 nlohmann::json handle_resources_read(Engine& engine, std::string_view uri) {
   if (uri == "graphstate://briefing") {
-    std::string text = "# GraphState briefing\n\nWorkspace: " + engine.config().workspace_key() + "\n";
+    auto b = memory::generate_briefing("", engine.sessions().ctx(), engine);
     return {
         {"contents", {
             {
                 {"uri", "graphstate://briefing"},
                 {"mimeType", "text/markdown"},
-                {"text", text}
+                {"text", b.markdown}
             }
         }}
     };
@@ -42,12 +45,20 @@ nlohmann::json handle_resources_read(Engine& engine, std::string_view uri) {
 
   if (uri == "graphstate://rules") {
     nlohmann::json rules = nlohmann::json::array();
+    for (const auto& [id, cfg] : engine.gate().rules_engine().rules()) {
+      rules.push_back({
+          {"id", id},
+          {"severity", cfg.severity},
+          {"max", cfg.max},
+          {"min_lines", cfg.min_lines}
+      });
+    }
     return {
         {"contents", {
             {
                 {"uri", "graphstate://rules"},
                 {"mimeType", "application/json"},
-                {"text", rules.dump()}
+                {"text", rules.dump(2)}
             }
         }}
     };

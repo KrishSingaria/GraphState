@@ -14,6 +14,11 @@ namespace gs::gate {
 class Gate;
 }
 
+namespace gs::memory {
+class Sessions;
+class MemoryStore;
+}
+
 namespace gs {
 
 class Engine {
@@ -41,6 +46,12 @@ public:
   gate::Gate& gate() { return *gate_; }
   const gate::Gate& gate() const { return *gate_; }
 
+  memory::Sessions& sessions() { return *sessions_; }
+  const memory::Sessions& sessions() const { return *sessions_; }
+
+  memory::MemoryStore& memory_store() { return *memory_store_; }
+  const memory::MemoryStore& memory_store() const { return *memory_store_; }
+
   std::mutex& state_mutex() { return state_mu_; }
 
   // Bootstrap schema and initialize engine metadata
@@ -54,6 +65,8 @@ private:
   std::unique_ptr<index::GraphWriter> graph_writer_;
   std::unique_ptr<index::Indexer> indexer_;
   std::unique_ptr<gate::Gate> gate_;
+  std::unique_ptr<memory::Sessions> sessions_;
+  std::unique_ptr<memory::MemoryStore> memory_store_;
   std::mutex state_mu_;
 };
 

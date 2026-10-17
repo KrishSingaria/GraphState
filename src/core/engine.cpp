@@ -3,6 +3,8 @@
 #include "db/schema.hpp"
 #include "gate/disk_txn.hpp"
 #include "gate/gate.hpp"
+#include "memory/memory_store.hpp"
+#include "memory/sessions.hpp"
 #include "platform/platform.hpp"
 
 namespace gs {
@@ -20,11 +22,14 @@ Engine::Engine(core::Config config)
   graph_writer_ = std::make_unique<index::GraphWriter>(client_, config_.project_graph());
   indexer_ = std::make_unique<index::Indexer>(*this);
   gate_ = std::make_unique<gate::Gate>(*this);
+  sessions_ = std::make_unique<memory::Sessions>(*this);
+  memory_store_ = std::make_unique<memory::MemoryStore>(*this);
 }
 
 Engine::~Engine() = default;
 
 void Engine::initialize() {
+  sessions_->mark_interrupted_on_startup();
   gate::DiskTxn::recover_startup(config_.root, client_, config_.project_graph());
   db::bootstrap_project_schema(client_, config_.project_graph());
   db::bootstrap_user_schema(client_, config_.user_graph());

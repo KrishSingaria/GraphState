@@ -56,6 +56,7 @@ public:
                                const std::vector<lang::ByteRange>& modified_ranges) const;
 
   const std::vector<std::string>& rule_errors() const { return rule_errors_; }
+  const std::map<std::string, RuleConfig>& rules() const { return rules_; }
 
 private:
   void init_defaults();

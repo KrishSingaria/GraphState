@@ -7,6 +7,8 @@
 #include <vector>
 #include <nlohmann/json.hpp>
 
+#include "memory/session_ctx.hpp"
+
 namespace gs {
 class Engine;
 }
@@ -15,6 +17,7 @@ namespace gs::mcp {
 
 struct ToolContext {
   Engine& engine;
+  memory::SessionCtx session;
   std::string session_id;
 };
 

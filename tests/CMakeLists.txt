@@ -98,6 +98,18 @@ gs_apply_warnings(test_gate_e2e)
 add_test(NAME test_gate_e2e COMMAND test_gate_e2e)
 set_tests_properties(test_gate_e2e PROPERTIES LABELS "db")
 
+add_executable(test_memory unit/test_memory.cpp)
+target_link_libraries(test_memory PRIVATE graphstate_core doctest::doctest)
+gs_apply_warnings(test_memory)
+add_test(NAME test_memory COMMAND test_memory)
+set_tests_properties(test_memory PROPERTIES LABELS "unit")
+
+add_executable(test_memory_db integration/test_memory_db.cpp)
+target_link_libraries(test_memory_db PRIVATE graphstate_core doctest::doctest)
+gs_apply_warnings(test_memory_db)
+add_test(NAME test_memory_db COMMAND test_memory_db)
+set_tests_properties(test_memory_db PROPERTIES LABELS "db")
+
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
   add_test(NAME test_mcp_e2e
