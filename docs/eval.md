@@ -44,3 +44,10 @@
 | T08 | Grep (2), Read (4), Edit (4), Bash (2) | gs:get_briefing (2), Grep (4), Read (4), gs:get_impact (2), gs:read_symbol (2), gs:propose_patch (2), gs:end_session (2) | 7 t / 1491 out | 10 t / 2358 out |
 | T09 | Grep (2), Glob (2), Read (2), Bash (10), Write (2) | gs:get_briefing (2), gs:search_symbols (2), gs:read_symbol (2), gs:get_file_outline (2), gs:propose_patch (4), Bash (8), gs:end_session (2) | 10 t / 6936 out | 12 t / 10789 out |
 | T10 | Grep (4), Read (6), Glob (2), Edit (2), Bash (2) | gs:get_briefing (2), gs:search_symbols (4), gs:read_symbol (4), gs:get_file_outline (2), gs:propose_patch (2), Bash (2), gs:end_session (2) | 9 t / 2063 out | 10 t / 2719 out |
+
+---
+
+## Next Milestone: Real-World OSS Blast-Radius Evaluation
+
+To stress-test GraphState beyond synthetic micro-benchmarks and prove immunity to "Localized Tunnel Vision" on production open-source codebases, see the full execution plan in [docs/oss_eval_plan.md](oss_eval_plan.md).
+
