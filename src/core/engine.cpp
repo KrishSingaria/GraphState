@@ -1,6 +1,8 @@
 #include "core/engine.hpp"
 
 #include "db/schema.hpp"
+#include "gate/disk_txn.hpp"
+#include "gate/gate.hpp"
 #include "platform/platform.hpp"
 
 namespace gs {
@@ -17,11 +19,13 @@ Engine::Engine(core::Config config)
   fact_store_.set_case_insensitive(platform::fs_case_insensitive(config_.root));
   graph_writer_ = std::make_unique<index::GraphWriter>(client_, config_.project_graph());
   indexer_ = std::make_unique<index::Indexer>(*this);
+  gate_ = std::make_unique<gate::Gate>(*this);
 }
 
 Engine::~Engine() = default;
 
 void Engine::initialize() {
+  gate::DiskTxn::recover_startup(config_.root, client_, config_.project_graph());
   db::bootstrap_project_schema(client_, config_.project_graph());
   db::bootstrap_user_schema(client_, config_.user_graph());
   db::ensure_meta(client_, config_.project_graph(), platform::to_utf8(config_.root), config_.workspace_key());

@@ -1,0 +1,7 @@
+> {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test-runner","version":"1.0"}}}
+< {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-11-25","serverInfo":{"name":"graphstate"}}}
+> {"jsonrpc":"2.0","method":"notifications/initialized"}
+> {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"propose_patch","arguments":{"intent":"Add currency to totals without callers","reasoning":"Breaks callers","dry_run":false,"edits":[{"op":"replace_symbol","file":"billing.py","symbol":"calculate_total","code":"def calculate_total(cart: Cart, currency: str, tax_rate: float = 0.1) -> Decimal:\n    return Decimal('0')\n"}]}}}
+< {"jsonrpc":"2.0","id":2,"result":{"isError":false,"structuredContent":{"status":"REJECTED","failed_phase":"BLAST_RADIUS"}}}
+> {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"propose_patch","arguments":{"intent":"Add default currency to totals","reasoning":"Compatible with callers","dry_run":false,"edits":[{"op":"replace_symbol","file":"billing.py","symbol":"calculate_total","code":"def calculate_total(cart: Cart, tax_rate: float = 0.1, currency: str = 'USD') -> Decimal:\n    subtotal = sum((i.price * i.qty for i in cart.items), Decimal('0'))\n    return round_money(subtotal * (1 + Decimal(str(tax_rate))))\n"}]}}}
+< {"jsonrpc":"2.0","id":3,"result":{"isError":false,"structuredContent":{"status":"APPLIED"}}}

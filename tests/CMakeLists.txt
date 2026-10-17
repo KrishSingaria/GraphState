@@ -74,6 +74,30 @@ gs_apply_warnings(test_schema_validate)
 add_test(NAME test_schema_validate COMMAND test_schema_validate)
 set_tests_properties(test_schema_validate PROPERTIES LABELS "unit")
 
+add_executable(test_apply unit/test_apply.cpp)
+target_link_libraries(test_apply PRIVATE graphstate_core doctest::doctest)
+gs_apply_warnings(test_apply)
+add_test(NAME test_apply COMMAND test_apply)
+set_tests_properties(test_apply PROPERTIES LABELS "unit")
+
+add_executable(test_rules unit/test_rules.cpp)
+target_link_libraries(test_rules PRIVATE graphstate_core doctest::doctest)
+gs_apply_warnings(test_rules)
+add_test(NAME test_rules COMMAND test_rules)
+set_tests_properties(test_rules PROPERTIES LABELS "unit")
+
+add_executable(test_disk_txn unit/test_disk_txn.cpp)
+target_link_libraries(test_disk_txn PRIVATE graphstate_core doctest::doctest)
+gs_apply_warnings(test_disk_txn)
+add_test(NAME test_disk_txn COMMAND test_disk_txn)
+set_tests_properties(test_disk_txn PROPERTIES LABELS "unit")
+
+add_executable(test_gate_e2e integration/test_gate_e2e.cpp)
+target_link_libraries(test_gate_e2e PRIVATE graphstate_core doctest::doctest)
+gs_apply_warnings(test_gate_e2e)
+add_test(NAME test_gate_e2e COMMAND test_gate_e2e)
+set_tests_properties(test_gate_e2e PROPERTIES LABELS "db")
+
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
   add_test(NAME test_mcp_e2e
@@ -83,5 +107,6 @@ if(Python3_Interpreter_FOUND)
   )
   set_tests_properties(test_mcp_e2e PROPERTIES LABELS "e2e")
 endif()
+
 
 
