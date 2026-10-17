@@ -291,7 +291,7 @@ Measured on standard dev hardware using `graphstate bench`:
 
 ## 11. Honest Enforcement Boundary
 
-We believe in honest claims about what an MCP tool can and cannot enforce:
+I believe in honest claims about what an MCP tool can and cannot enforce:
 
 | Capability | Status | How It Is Achieved |
 |---|---|---|
@@ -305,8 +305,8 @@ We believe in honest claims about what an MCP tool can and cannot enforce:
 ## 12. AI Disclosure
 
 In accordance with Hackathon Submission Guidelines:
-- **Design & Specification**: The design documentation in `docs/design/` was co-authored with Claude 3.5 Sonnet and Gemini models.
-- **Implementation**: Written and paired with agentic coding assistants (Claude Code / Antigravity). All C++20 architecture, database schema, Cypher queries, Tree-sitter integrations, and verification logic were directed, tested, and reviewed by human engineers.
+- **Origin & Vision**: The concept of gatekeeping codebase edits with graph invariant verification—allowing AI agents to read via CodeGraph / memory MCP tools while strictly validating writes to prevent breaking downstream functions 50 steps away and maintaining persistent cross-session memory—was conceived by the author based on firsthand experience as an AI/ML intern at a company actively utilizing AI-assisted coding.
+- **Pair Programming & Development**: Built and implemented end-to-end with **Gemini 3.8 Flash (High Effort)** in **Google Antigravity**. All C++20 architecture, FalkorDB Cypher schemas, Tree-sitter parsers, and verification gate algorithms were guided, directed, reviewed, and tested in continuous human-AI pair programming.
 - **Timeline**: No source code existed prior to the hackathon kickoff on October 15, 2026.
 
 ---

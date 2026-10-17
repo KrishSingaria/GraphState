@@ -1,6 +1,6 @@
 # I Built a Bouncer for AI Coding Agents with FalkorDB
 
-*By the GraphState Team — Submitted to Graph Hacks: Context for AI Agents (2026)*
+*Submitted to Graph Hacks: Context for AI Agents (2026)*
 
 ---
 
@@ -16,11 +16,16 @@ The agent never touched `app.py`. Nor did it touch `checkout.py`, `reports.py`, 
 
 The next morning, CI was a flaming crater. Four downstream services were passing `tax_rate` into `currency`. Transactions crashed at runtime.
 
-This is the dirty secret of modern AI coding agents (Claude Code, Cursor, Copilot, Devstral): **they lack structural blast-radius awareness**. Because LLMs operate within a narrow token window, they edit in a vacuum. They hallucinate function arguments, forget exports, and break callers three layers deep across a repository.
+This isn't just a dramatic story—it represents the fundamental reality of AI agents simply not being able to see the whole picture. Because LLMs operate within a narrow token context, they edit in a structural vacuum. They lack global blast-radius awareness: they hallucinate function arguments, forget exports, and break callers three layers deep across a repository. Worse, agents keep making the **exact same mistakes** across sessions because LLM memory is ephemeral.
 
-Worse, agents keep making the **exact same mistakes** across sessions because LLM memory is ephemeral.
+During my AI/ML internship at a company where AI-based coding tools are used heavily, I worked extensively with tools like `codebase-memory-mcp` and CodeGraph. While those tools are great for reading codebase context and recalling information, I realized that read access alone cannot prevent subtle breakages. 
 
-I decided to stop trusting the agent's goodwill and build a bouncer.
+What was truly missing was **gatekeeping the codebase**. By actively gatekeeping every edit before it touches disk, a gatekeeper can ensure the AI writes truly robust code—guaranteeing a change doesn't break a dependent file or function 50 steps away.
+
+That insight became the founding principle of GraphState:
+> **If agents can read code through a knowledge graph, then every single edit must be gatekept by that graph. Agents should not be allowed to touch the disk until a graph traversal proves they haven't made a mistake—and every mistake they do make must be stored in persistent memory so they never repeat it.**
+
+I decided to build a deterministic bouncer for AI coding agents.
 
 ---
 
@@ -28,12 +33,12 @@ I decided to stop trusting the agent's goodwill and build a bouncer.
 
 What if an agent **physically could not write code directly to disk**?
 
-What if every file edit, function modification, or refactor had to pass through a strict gatekeeper that:
-1. Materializes the entire repository as an in-memory and persistent call graph.
+While tools like CodeGraph excel at letting agents *read* interconnected code, GraphState flips the paradigm to **active verification and gatekeeping**:
+1. Materializes the entire repository as an in-memory and persistent call graph in FalkorDB.
 2. Intercepts the agent's patch *before* it touches disk.
 3. Performs an instant graph traversal across every single caller in the repository.
-4. Rejects the patch with surgical line-and-column diagnostic proof if any caller or import breaks.
-5. Records the failure as an in-graph `Pitfall` node, so the agent is permanently warned in future sessions.
+4. Rejects the patch with surgical line-and-column diagnostic proof if any caller, signature, or import breaks.
+5. Records the failure as an in-graph `Pitfall` node with persistent cross-session memory, so the agent is permanently warned in future sessions.
 
 To make this work in real-time without breaking an agent's conversational flow, the graph queries had to execute in **sub-millisecond latency**.
 
@@ -68,11 +73,11 @@ graph LR
     WAL -->|fsync + rename| Disk[(Authoritative Disk Code)]
 ```
 
-We built the core engine in **C++20** using Tree-sitter for AST parsing and **FalkorDB** as our graph database.
+I built the core engine in **C++20** using Tree-sitter for AST parsing and **FalkorDB** as the graph database.
 
 Why this pairing?
 - **Raw Speed**: C++ Tree-sitter parses 100,000 lines of Python/TypeScript in under 300 ms.
-- **Expressive Graph Queries with OpenCypher**: Graph relationships (e.g. `(Function)-[:CALLS*1..3]->(Function)`) are notoriously cumbersome and slow in relational databases with recursive CTEs. OpenCypher allows us to express complex transitive blast-radius queries in three lines of declarative code.
+- **Expressive Graph Queries with OpenCypher**: Graph relationships (e.g. `(Function)-[:CALLS*1..3]->(Function)`) are notoriously cumbersome and slow in relational databases with recursive CTEs. OpenCypher allows expressing complex transitive blast-radius queries in three lines of declarative code.
 - **Sub-Millisecond Graph Traversal**: FalkorDB’s sparse-matrix linear algebra engine processes multi-hop graph queries in microseconds.
 - **Durable Memory via Redis AOF**: While code files on disk are always the ground truth, user preferences and failure pitfalls must persist across agent context wipes. FalkorDB’s Redis-native persistence (`appendfsync everysec`) guarantees zero memory loss without managing separate database engines.
 
@@ -80,7 +85,7 @@ Why this pairing?
 
 ### 4. The Blast-Radius Query, Explained Line by Line
 
-When an agent calls `propose_patch`, GraphState extracts every modified function signature and runs our batched blast-radius Cypher query:
+When an agent calls `propose_patch`, GraphState extracts every modified function signature and runs the batched blast-radius Cypher query:
 
 ```cypher
 UNWIND $ids AS tid
@@ -101,8 +106,8 @@ RETURN toJSON({
 ```
 
 Let's break down what makes this query special:
-1. `UNWIND $ids AS tid`: We batch all modified functions into a single parameter array. We never query FalkorDB in a loop.
-2. `MATCH (c:Function)-[e:CALLS]->(t:Function {id: tid})`: Finds every function `c` in the entire repository that calls any of our modified targets `t`.
+1. `UNWIND $ids AS tid`: All modified functions are batched into a single parameter array, avoiding querying FalkorDB in a loop.
+2. `MATCH (c:Function)-[e:CALLS]->(t:Function {id: tid})`: Finds every function `c` in the entire repository that calls any of the modified targets `t`.
 3. `WHERE NOT c.file IN $exclude_files`: Files that the agent is modifying *in the same atomic patch* are excluded from old-state checks, allowing agents to submit coordinated multi-file refactors.
 4. `RETURN toJSON(...)`: FalkorDB natively serializes the caller coordinates (`file`, `line`, `col`), the raw call expression (`call_text`), and the argument counts directly into JSON, eliminating deserialization overhead in C++.
 
@@ -165,7 +170,7 @@ In GraphState, **memory is a deterministic side effect of the gate**:
 
 What happens when an engineer or agent kills the process mid-patch?
 
-We tested this ruthlessly:
+I tested this ruthlessly:
 ```bash
 # Propose a 5-file patch and kill the engine at step 3
 kill -9 $(pidof graphstate)
@@ -183,7 +188,7 @@ If killed at any intermediate step, GraphState detects the uncommitted journal o
 
 ### 8. The Experiment: With vs. Without GraphState
 
-In Milestone 10a, we designed an automated evaluation harness testing 10 adversarial coding tasks across two arms:
+In Milestone 10a, I designed an automated evaluation harness testing 10 adversarial coding tasks across two arms:
 - **Arm A (Baseline)**: Claude Code operating directly against the filesystem.
 - **Arm B (Gated)**: Claude Code operating through GraphState's MCP gatekeeper.
 
@@ -252,3 +257,12 @@ Sub-millisecond graph queries, less than 9 MB of RAM, and zero broken callers.
 2. **Type-Checker Bridges**: Integrating Pyright and TypeScript LSP diagnostics as Phase 6 optional gate verification.
 
 If we want AI agents to write production software, we have to stop treating code as mere text files and start treating it as what it truly is: **a living, interconnected graph**.
+
+---
+
+### 11. How This Was Built & Acknowledgments
+
+The concept of gatekeeping codebase edits with graph-based invariant checks—combining active write verification with persistent cross-session memory while agents read via tools like `codebase-memory-mcp`—originated directly from my personal experience during my AI/ML internship at a company actively utilizing AI-assisted coding. Seeing the critical need to prevent agents from breaking distant callers 50 steps away inspired this "bouncer" architecture.
+
+To turn this vision into reality for the hackathon within 96 hours, I paired with **Gemini 3.8 Flash (High Effort)** in **Google Antigravity**. From drafting the multi-phase gate architecture and writing high-performance C++20 with Tree-sitter and FalkorDB Cypher, to diagnosing nanosecond latency bottlenecks and creating the evaluation harness, Antigravity was an incredible pair-programming companion throughout the entire journey.
+

@@ -18,7 +18,7 @@
 | **1:55 - 2:10** | Crash Resilience Test | `kill -9` engine + restart FalkorDB | *"Disk is always authoritative. Even on sudden crash, the Write-Ahead Journal guarantees zero corrupted files."* |
 | **2:10 - 2:25** | Session Briefing & Memory | New session: `get_briefing` called | *"On new session startup, `get_briefing` reminds the agent of past pitfalls, active conventions, and user preferences."* |
 | **2:25 - 2:40** | Changeset Mode | Multi-step refactor using Changesets | *"For greenfield APIs, changeset mode manages forward references with obligations until all parts compile cleanly."* |
-| **2:40 - 2:50** | Evaluation Results | Milestone 10a Eval Table | *"In our benchmark eval, GraphState eliminated 100% of broken references and cut regression debug tokens by 36%."* |
+| **2:40 - 2:50** | Evaluation Results | Milestone 10a Eval Table | *"In my benchmark eval, GraphState eliminated 100% of broken references and cut regression debug tokens by 36%."* |
 | **2:50 - 3:00** | Benchmark & Outro | `graphstate bench` terminal output | *"Under 9 MB RAM, sub-millisecond graph traversals. Fully open source under Apache 2.0."* |
 
 ---
