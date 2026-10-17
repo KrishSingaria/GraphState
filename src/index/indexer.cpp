@@ -117,29 +117,33 @@ IndexReport Indexer::startup_reconcile() {
   engine_.resolver().rebuild_indices(engine_.fact_store());
 
   // 7. Delete deleted files
-  if (!deleted.empty()) {
-    engine_.graph_writer().delete_files(deleted);
+  if (engine_.client().ping()) {
+    if (!deleted.empty()) {
+      engine_.graph_writer().delete_files(deleted);
+    }
   }
 
   // 8. Sync changed files
   int64_t now = core::now_ms();
-  if (!changed.empty()) {
-    std::vector<const lang::FileFacts*> changed_facts;
-    std::vector<index::ResolvedImport> all_imports;
-    std::vector<index::ResolvedInherit> all_inherits;
+  if (engine_.client().ping()) {
+    if (!changed.empty()) {
+      std::vector<const lang::FileFacts*> changed_facts;
+      std::vector<index::ResolvedImport> all_imports;
+      std::vector<index::ResolvedInherit> all_inherits;
 
-    for (const auto& f : changed) {
-      const auto* facts = engine_.fact_store().get(f);
-      if (facts) {
-        changed_facts.push_back(facts);
-        auto imps = engine_.resolver().resolve_imports_for_file(engine_.fact_store(), *facts);
-        all_imports.insert(all_imports.end(), imps.begin(), imps.end());
-        auto inhs = engine_.resolver().resolve_inherits_for_file(engine_.fact_store(), *facts);
-        all_inherits.insert(all_inherits.end(), inhs.begin(), inhs.end());
+      for (const auto& f : changed) {
+        const auto* facts = engine_.fact_store().get(f);
+        if (facts) {
+          changed_facts.push_back(facts);
+          auto imps = engine_.resolver().resolve_imports_for_file(engine_.fact_store(), *facts);
+          all_imports.insert(all_imports.end(), imps.begin(), imps.end());
+          auto inhs = engine_.resolver().resolve_inherits_for_file(engine_.fact_store(), *facts);
+          all_inherits.insert(all_inherits.end(), inhs.begin(), inhs.end());
+        }
       }
-    }
 
-    engine_.graph_writer().sync_files(changed_facts, all_imports, all_inherits, now);
+      engine_.graph_writer().sync_files(changed_facts, all_imports, all_inherits, now);
+    }
   }
 
   // 9. Call resolution for affected files
@@ -166,10 +170,11 @@ IndexReport Indexer::startup_reconcile() {
     auto calls = engine_.resolver().resolve_file(engine_.fact_store(), f);
     all_calls.insert(all_calls.end(), calls.begin(), calls.end());
   }
-  engine_.graph_writer().replace_calls(affected, all_calls);
 
-  // 10. Update last indexed timestamp
-  engine_.graph_writer().touch_indexed(now);
+  if (engine_.client().ping()) {
+    engine_.graph_writer().replace_calls(affected, all_calls);
+    engine_.graph_writer().touch_indexed(now);
+  }
 
   auto t1 = std::chrono::steady_clock::now();
   report.ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
@@ -216,51 +221,53 @@ IndexReport Indexer::reindex(const std::vector<std::string>& files, std::string_
 
   engine_.resolver().rebuild_indices(engine_.fact_store());
 
-  if (!deleted.empty()) {
-    engine_.graph_writer().delete_files(deleted);
-  }
+  if (engine_.client().ping()) {
+    if (!deleted.empty()) {
+      engine_.graph_writer().delete_files(deleted);
+    }
 
-  int64_t now = core::now_ms();
-  if (!changed.empty()) {
-    std::vector<const lang::FileFacts*> changed_facts;
-    std::vector<index::ResolvedImport> all_imports;
-    std::vector<index::ResolvedInherit> all_inherits;
+    int64_t now = core::now_ms();
+    if (!changed.empty()) {
+      std::vector<const lang::FileFacts*> changed_facts;
+      std::vector<index::ResolvedImport> all_imports;
+      std::vector<index::ResolvedInherit> all_inherits;
 
+      for (const auto& f : changed) {
+        const auto* facts = engine_.fact_store().get(f);
+        if (facts) {
+          changed_facts.push_back(facts);
+          auto imps = engine_.resolver().resolve_imports_for_file(engine_.fact_store(), *facts);
+          all_imports.insert(all_imports.end(), imps.begin(), imps.end());
+          auto inhs = engine_.resolver().resolve_inherits_for_file(engine_.fact_store(), *facts);
+          all_inherits.insert(all_inherits.end(), inhs.begin(), inhs.end());
+        }
+      }
+
+      engine_.graph_writer().sync_files(changed_facts, all_imports, all_inherits, now);
+    }
+
+    std::unordered_set<std::string> aff_set(changed.begin(), changed.end());
     for (const auto& f : changed) {
-      const auto* facts = engine_.fact_store().get(f);
-      if (facts) {
-        changed_facts.push_back(facts);
-        auto imps = engine_.resolver().resolve_imports_for_file(engine_.fact_store(), *facts);
-        all_imports.insert(all_imports.end(), imps.begin(), imps.end());
-        auto inhs = engine_.resolver().resolve_inherits_for_file(engine_.fact_store(), *facts);
-        all_inherits.insert(all_inherits.end(), inhs.begin(), inhs.end());
+      for (const auto& dep : engine_.resolver().dependents_of(f)) {
+        aff_set.insert(dep);
       }
     }
-
-    engine_.graph_writer().sync_files(changed_facts, all_imports, all_inherits, now);
-  }
-
-  std::unordered_set<std::string> aff_set(changed.begin(), changed.end());
-  for (const auto& f : changed) {
-    for (const auto& dep : engine_.resolver().dependents_of(f)) {
-      aff_set.insert(dep);
+    for (const auto& f : deleted) {
+      for (const auto& dep : engine_.resolver().dependents_of(f)) {
+        aff_set.insert(dep);
+      }
     }
-  }
-  for (const auto& f : deleted) {
-    for (const auto& dep : engine_.resolver().dependents_of(f)) {
-      aff_set.insert(dep);
+    std::vector<std::string> affected(aff_set.begin(), aff_set.end());
+
+    std::vector<ResolvedCall> all_calls;
+    for (const auto& f : affected) {
+      auto calls = engine_.resolver().resolve_file(engine_.fact_store(), f);
+      all_calls.insert(all_calls.end(), calls.begin(), calls.end());
     }
-  }
-  std::vector<std::string> affected(aff_set.begin(), aff_set.end());
+    engine_.graph_writer().replace_calls(affected, all_calls);
 
-  std::vector<ResolvedCall> all_calls;
-  for (const auto& f : affected) {
-    auto calls = engine_.resolver().resolve_file(engine_.fact_store(), f);
-    all_calls.insert(all_calls.end(), calls.begin(), calls.end());
+    engine_.graph_writer().touch_indexed(now);
   }
-  engine_.graph_writer().replace_calls(affected, all_calls);
-
-  engine_.graph_writer().touch_indexed(now);
 
   auto t1 = std::chrono::steady_clock::now();
   report.ms = std::chrono::duration<double, std::milli>(t1 - t0).count();

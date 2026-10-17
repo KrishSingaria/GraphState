@@ -62,4 +62,26 @@ gs_apply_warnings(test_graph_writer)
 add_test(NAME test_graph_writer COMMAND test_graph_writer)
 set_tests_properties(test_graph_writer PROPERTIES LABELS "db")
 
+add_executable(test_text unit/test_text.cpp)
+target_link_libraries(test_text PRIVATE graphstate_core doctest::doctest)
+gs_apply_warnings(test_text)
+add_test(NAME test_text COMMAND test_text)
+set_tests_properties(test_text PROPERTIES LABELS "unit")
+
+add_executable(test_schema_validate unit/test_schema_validate.cpp)
+target_link_libraries(test_schema_validate PRIVATE graphstate_core doctest::doctest)
+gs_apply_warnings(test_schema_validate)
+add_test(NAME test_schema_validate COMMAND test_schema_validate)
+set_tests_properties(test_schema_validate PROPERTIES LABELS "unit")
+
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_Interpreter_FOUND)
+  add_test(NAME test_mcp_e2e
+    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/e2e/run.py"
+            --bin "$<TARGET_FILE:graphstate>"
+            --fixtures "${CMAKE_CURRENT_SOURCE_DIR}/fixtures/benchmark_project"
+  )
+  set_tests_properties(test_mcp_e2e PROPERTIES LABELS "e2e")
+endif()
+
 

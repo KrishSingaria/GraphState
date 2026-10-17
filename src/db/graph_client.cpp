@@ -74,7 +74,11 @@ GraphClient::GraphClient(std::string host, int port, std::string password, int c
       password_(std::move(password)),
       connect_timeout_ms_(connect_timeout_ms),
       query_timeout_ms_(query_timeout_ms) {
-  connect();
+  try {
+    connect();
+  } catch (const gs::Error&) {
+    // Disconnected state; ensure_connected() will connect or throw on query execution
+  }
 }
 
 GraphClient::~GraphClient() {

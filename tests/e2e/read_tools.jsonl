@@ -1,0 +1,15 @@
+> {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test-runner","version":"1.0"}}}
+< {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-11-25","serverInfo":{"name":"graphstate"}}}
+> {"jsonrpc":"2.0","method":"notifications/initialized"}
+> {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
+< {"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"get_briefing"},{"name":"search_symbols"},{"name":"get_file_outline"},{"name":"read_symbol"}]}}
+> {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search_symbols","arguments":{"query":"calculate_total"}}}
+< {"jsonrpc":"2.0","id":3,"result":{"isError":false,"structuredContent":{"total":1}}}
+> {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"get_file_outline","arguments":{"file":"billing.py"}}}
+< {"jsonrpc":"2.0","id":4,"result":{"isError":false,"structuredContent":{"file":"billing.py","language":"python"}}}
+> {"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"read_symbol","arguments":{"symbol":"calculate_total","file":"billing.py"}}}
+< {"jsonrpc":"2.0","id":5,"result":{"isError":false,"structuredContent":{"id":"billing.py::calculate_total","kind":"function"}}}
+> {"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"status","arguments":{}}}
+< {"jsonrpc":"2.0","id":6,"result":{"isError":false,"structuredContent":{"version":"0.1.0"}}}
+> {"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"reindex","arguments":{}}}
+< {"jsonrpc":"2.0","id":7,"result":{"isError":false,"structuredContent":{"parsed":8}}}

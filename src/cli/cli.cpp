@@ -55,6 +55,10 @@ int run(int argc, char* argv[]) {
     return 0;
   }
 
+  if (cmd == "serve") {
+    return cmd_serve(argc, argv);
+  }
+
   if (cmd == "doctor") {
     return cmd_doctor(argc, argv);
   }

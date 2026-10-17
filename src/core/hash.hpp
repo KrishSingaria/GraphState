@@ -16,6 +16,10 @@ inline std::string xxh3_hex(std::string_view data) {
   return std::string(buf);
 }
 
+inline std::string hash_bytes(std::string_view data) {
+  return xxh3_hex(data);
+}
+
 inline std::string collapse_whitespace(std::string_view s) {
   std::string out;
   out.reserve(s.size());

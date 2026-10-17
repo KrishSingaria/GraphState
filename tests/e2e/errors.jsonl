@@ -1,0 +1,16 @@
+> {invalid json line
+< {"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"Parse error"}}
+> [{"jsonrpc":"2.0","id":1,"method":"ping"}]
+< {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"JSON-RPC batching is not supported"}}
+> {"jsonrpc":"2.0","id":100,"method":"non_existent_method","params":{}}
+< {"jsonrpc":"2.0","id":100,"error":{"code":-32601}}
+> {"jsonrpc":"2.0","id":101,"method":"tools/call","params":{"name":"non_existent_tool","arguments":{}}}
+< {"jsonrpc":"2.0","id":101,"error":{"code":-32602,"message":"Unknown tool: non_existent_tool"}}
+> {"jsonrpc":"2.0","id":102,"method":"tools/call","params":{"name":"search_symbols","arguments":123}}
+< {"jsonrpc":"2.0","id":102,"error":{"code":-32602}}
+> {"jsonrpc":"2.0","id":103,"method":"tools/call","params":{"name":"search_symbols","arguments":{}}}
+< {"jsonrpc":"2.0","id":103,"result":{"isError":true,"structuredContent":{"error":{"code":"INVALID_ARGUMENT"}}}}
+> {"jsonrpc":"2.0","id":104,"method":"tools/call","params":{"name":"read_symbol","arguments":{"symbol":"calc_total"}}}
+< {"jsonrpc":"2.0","id":104,"result":{"isError":true,"structuredContent":{"error":{"code":"SYMBOL_NOT_FOUND"}}}}
+> {"jsonrpc":"2.0","id":105,"method":"resources/read","params":{"uri":"graphstate://unknown_resource"}}
+< {"jsonrpc":"2.0","id":105,"error":{"code":-32002}}
