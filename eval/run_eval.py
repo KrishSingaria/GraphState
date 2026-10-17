@@ -216,10 +216,21 @@ def run_eval_task(task, arm, run_idx, args, ts, base_ws_dir, graphstate_bin):
     )
     hallucinated_calls = audit_counts.get("MISSING_SYMBOL", 0)
 
-    # Unit behavioral tests: python -m unittest discover -s eval/tests with PYTHONPATH=ws
+    # Unit regression tests: python -m unittest [regression_tests...] with PYTHONPATH=ws
     test_env = {"PYTHONPATH": run_ws}
+    all_test_files = [
+        "eval/tests/test_billing.py",
+        "eval/tests/test_catalog.py",
+        "eval/tests/test_money.py",
+        "eval/tests/test_orders.py",
+        "eval/tests/test_reports.py",
+        "eval/tests/test_text.py"
+    ]
+    exclude = set(task.get("exclude_tests", []))
+    regression_tests = [f for f in all_test_files if os.path.basename(f) not in exclude]
+
     t_code, t_out, t_err, _, _ = run_cmd(
-        [sys.executable, "-m", "unittest", "discover", "-s", "eval/tests"],
+        [sys.executable, "-m", "unittest"] + regression_tests,
         cwd=os.getcwd(),
         env=test_env
     )

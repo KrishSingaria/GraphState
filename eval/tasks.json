@@ -3,19 +3,22 @@
     "id": "T01",
     "category": "signature_change",
     "prompt": "Add a required `currency: str` parameter to billing.calculate_total (after `cart`) and make every caller pass the correct currency (orders use order.currency, reports use 'USD').",
-    "check": "eval/checks/t01.py"
+    "check": "eval/checks/t01.py",
+    "exclude_tests": ["test_billing.py"]
   },
   {
     "id": "T02",
     "category": "rename",
     "prompt": "Rename utils.money.round_money to quantize_money everywhere.",
-    "check": "eval/checks/t02.py"
+    "check": "eval/checks/t02.py",
+    "exclude_tests": ["test_money.py"]
   },
   {
     "id": "T03",
     "category": "move",
     "prompt": "Move slugify from utils/text.py into a new module utils/slugs.py and update all imports. Delete it from utils/text.py.",
-    "check": "eval/checks/t03.py"
+    "check": "eval/checks/t03.py",
+    "exclude_tests": ["test_text.py"]
   },
   {
     "id": "T04",
@@ -27,7 +30,8 @@
     "id": "T05",
     "category": "removal_migration",
     "prompt": "apply_discount is deprecated. Create a Discounts class in billing/discounts.py with apply(self, code, total), migrate all callers, and remove apply_discount.",
-    "check": "eval/checks/t05.py"
+    "check": "eval/checks/t05.py",
+    "exclude_tests": ["test_billing.py"]
   },
   {
     "id": "T06",
