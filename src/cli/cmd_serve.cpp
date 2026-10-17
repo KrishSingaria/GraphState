@@ -31,20 +31,10 @@ int cmd_serve(int argc, char* argv[]) {
     auto config = core::Config::load(root);
     Engine engine(std::move(config));
 
-    // Try bootstrapping DB schema if DB is up
-    if (engine.client().ping()) {
-      try {
-        engine.initialize();
-      } catch (const std::exception& e) {
-        std::cerr << "Warning: DB initialization failed: " << e.what() << "\n";
-      }
-    }
-
-    // Startup reconcile
     try {
-      engine.indexer().startup_reconcile();
+      engine.initialize();
     } catch (const std::exception& e) {
-      std::cerr << "Warning: Startup indexing error: " << e.what() << "\n";
+      std::cerr << "Warning: Engine initialization failed: " << e.what() << "\n";
     }
 
     // Enter MCP loop over stdio

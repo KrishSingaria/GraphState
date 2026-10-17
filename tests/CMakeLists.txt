@@ -116,6 +116,18 @@ gs_apply_warnings(test_changesets)
 add_test(NAME test_changesets COMMAND test_changesets)
 set_tests_properties(test_changesets PROPERTIES LABELS "unit")
 
+add_executable(test_watcher unit/test_watcher.cpp)
+target_link_libraries(test_watcher PRIVATE graphstate_core doctest::doctest)
+gs_apply_warnings(test_watcher)
+add_test(NAME test_watcher COMMAND test_watcher)
+set_tests_properties(test_watcher PROPERTIES LABELS "unit")
+
+add_executable(test_restart integration/test_restart.cpp)
+target_link_libraries(test_restart PRIVATE graphstate_core doctest::doctest)
+gs_apply_warnings(test_restart)
+add_test(NAME test_restart COMMAND test_restart)
+set_tests_properties(test_restart PROPERTIES LABELS "db")
+
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
   add_test(NAME test_mcp_e2e

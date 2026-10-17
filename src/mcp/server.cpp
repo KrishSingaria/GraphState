@@ -295,6 +295,13 @@ nlohmann::json Server::on_tools_call(const nlohmann::json& id, const nlohmann::j
     };
   }
 
+  if (engine_.has_notices()) {
+    auto notices = engine_.drain_notices();
+    if (!notices.empty() && tool_result.contains("structuredContent") && tool_result["structuredContent"].is_object()) {
+      tool_result["structuredContent"]["_notices"] = std::move(notices);
+    }
+  }
+
   return decorate_result({{"jsonrpc", "2.0"}, {"id", id}, {"result", tool_result}}, false);
 }
 

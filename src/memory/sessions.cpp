@@ -312,6 +312,11 @@ void Sessions::end_on_shutdown() {
   end(auto_summary);
 }
 
+bool Sessions::is_active() const {
+  std::lock_guard<std::mutex> lock(mu_);
+  return initialized_ && !ended_;
+}
+
 const SessionCtx& Sessions::ctx() const {
   std::lock_guard<std::mutex> lock(mu_);
   return ctx_;

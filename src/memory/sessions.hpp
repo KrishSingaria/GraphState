@@ -41,6 +41,8 @@ public:
   // Ends session on server shutdown (auto-summary if not ended)
   void end_on_shutdown();
 
+  bool is_active() const;
+
   const SessionCtx& ctx() const;
   SessionCtx& ctx();
 
