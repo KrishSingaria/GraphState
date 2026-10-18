@@ -360,7 +360,7 @@ std::string to_workspace_rel(const std::filesystem::path& root, const std::files
 }
 
 bool is_contained(const std::filesystem::path& root, std::string_view rel_path) {
-  if (rel_path.starts_with("..") || rel_path.starts_with("/") || rel_path.find(':') != std::string_view::npos) {
+  if (rel_path.starts_with("..") || rel_path.starts_with("/") || rel_path.starts_with("\\") || rel_path.find(':') != std::string_view::npos) {
     return false;
   }
 

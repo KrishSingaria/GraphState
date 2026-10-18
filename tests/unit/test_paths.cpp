@@ -600,14 +600,19 @@ TEST_CASE("adversarial config: workspace key edge cases") {
   std::string key2 = cfg.workspace_key();
   CHECK(key1 == key2);
 
-  cfg.root = fs::path("z:/non_existent_workspace/");
+  fs::path ne_path = fs::temp_directory_path() / "gs_non_existent_workspace";
+  cfg.root = ne_path.string() + "/";
   std::string key_ne1 = cfg.workspace_key();
-  cfg.root = fs::path("z:/non_existent_workspace");
+  cfg.root = ne_path;
   std::string key_ne2 = cfg.workspace_key();
   CHECK(key_ne1 == key_ne2);
 
   // Root directory
+#ifdef _WIN32
   cfg.root = fs::path("C:/");
+#else
+  cfg.root = fs::path("/");
+#endif
   std::string key_root = cfg.workspace_key();
   CHECK(key_root.starts_with("workspace-"));
 
