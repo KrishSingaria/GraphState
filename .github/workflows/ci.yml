@@ -26,13 +26,26 @@ jobs:
             echo "::error title=Build Failure on ${{ matrix.preset }}::$ERR"
             exit 1
           }
-      - run: ctest --preset ${{ matrix.preset }} -L unit
+      - name: Test
+        shell: bash
+        run: |
+          set -o pipefail
+          ctest --preset ${{ matrix.preset }} -L unit --output-on-failure 2>&1 | tee test.log || {
+            ERR=$(tail -n 35 test.log | tr '\r\n' ' ')
+            echo "::error title=Test Failure on ${{ matrix.preset }}::$ERR"
+            exit 1
+          }
   db-tests:
     runs-on: ubuntu-24.04
     services:
       falkordb:
         image: falkordb/falkordb-server:6.0.2
         ports: ["6390:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 2s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: seanmiddleditch/gha-setup-ninja@v5
@@ -46,4 +59,25 @@ jobs:
             echo "::error title=Build Failure on db-tests::$ERR"
             exit 1
           }
-      - run: ctest --preset linux-release -L "db|e2e"
+      - name: Wait for FalkorDB
+        shell: bash
+        run: |
+          for i in {1..20}; do
+            if nc -z 127.0.0.1 6390; then
+              echo "FalkorDB is ready on port 6390!"
+              exit 0
+            fi
+            echo "Waiting for FalkorDB..."
+            sleep 1
+          done
+          echo "FalkorDB did not become ready in time"
+          exit 1
+      - name: Run DB Tests
+        shell: bash
+        run: |
+          set -o pipefail
+          ctest --preset linux-release -L "db|e2e" --output-on-failure 2>&1 | tee test.log || {
+            ERR=$(tail -n 35 test.log | tr '\r\n' ' ')
+            echo "::error title=Test Failure on db-tests::$ERR"
+            exit 1
+          }
