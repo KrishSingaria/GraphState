@@ -54,11 +54,13 @@ void on_shutdown_request(std::function<void()> cb) {
 }
 
 std::string to_utf8(const fs::path& p) {
-  return p.u8string();
+  const auto u8str = p.u8string();
+  return std::string(reinterpret_cast<const char*>(u8str.data()), u8str.size());
 }
 
 fs::path from_utf8(std::string_view s) {
-  return fs::u8path(s);
+  std::u8string u8(reinterpret_cast<const char8_t*>(s.data()), s.size());
+  return fs::path(u8);
 }
 
 fs::path executable_path() {
@@ -104,25 +106,19 @@ bool fs_case_insensitive(const fs::path& dir) {
 
 FileStat stat(const fs::path& p) {
   FileStat res;
-  std::error_code ec;
-  auto status = fs::status(p, ec);
-  if (ec || !fs::exists(status)) {
+  struct stat st;
+  if (::stat(p.c_str(), &st) != 0) {
     res.exists = false;
     return res;
   }
   res.exists = true;
-  res.regular = fs::is_regular_file(status);
-  if (res.regular) {
-    res.size = fs::file_size(p, ec);
-    if (ec) res.size = 0;
-  }
-
-  auto lwt = fs::last_write_time(p, ec);
-  if (!ec) {
-    auto sctp = std::chrono::clock_cast<std::chrono::system_clock>(lwt);
-    auto duration = sctp.time_since_epoch();
-    res.mtime_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
-  }
+  res.regular = S_ISREG(st.st_mode);
+  res.size = static_cast<uint64_t>(st.st_size);
+#if defined(__APPLE__)
+  res.mtime_ns = static_cast<int64_t>(st.st_mtimespec.tv_sec) * 1000000000LL + st.st_mtimespec.tv_nsec;
+#else
+  res.mtime_ns = static_cast<int64_t>(st.st_mtim.tv_sec) * 1000000000LL + st.st_mtim.tv_nsec;
+#endif
   return res;
 }
 
