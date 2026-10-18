@@ -198,7 +198,7 @@ redisReply* GraphClient::execute_command(const std::vector<std::string>& argv, b
   }
 
   if (!r) {
-    std::string err = ctx_ && ctx_->errstr ? ctx_->errstr : "null redis reply";
+    std::string err = (ctx_ && ctx_->errstr[0] != '\0') ? ctx_->errstr : "null redis reply";
     disconnect();
     throw gs::Error(ErrorCode::DB_UNAVAILABLE, "Redis command failed: " + err, {{"query_name", query_name}});
   }
@@ -336,7 +336,7 @@ std::vector<nlohmann::json> GraphClient::pipeline(const std::string& graph, cons
     void* r = nullptr;
     if (redisGetReply(ctx_, &r) != REDIS_OK || !r) {
       if (first_error.empty()) {
-        first_error = (ctx_ && ctx_->errstr) ? ctx_->errstr : "error reading pipeline reply";
+        first_error = (ctx_ && ctx_->errstr[0] != '\0') ? ctx_->errstr : "error reading pipeline reply";
         first_error_query = qs[i].name;
       }
       continue;
@@ -505,7 +505,7 @@ void GraphClient::constraint_unique(const std::string& graph, std::string_view l
 
   void* r = redisCommandArgv(ctx_, static_cast<int>(argv.size()), argv_ptrs.data(), argv_lens.data());
   if (!r) {
-    std::string err = ctx_ && ctx_->errstr ? ctx_->errstr : "null redis reply";
+    std::string err = (ctx_ && ctx_->errstr[0] != '\0') ? ctx_->errstr : "null redis reply";
     disconnect();
     throw gs::Error(ErrorCode::DB_UNAVAILABLE, "Redis constraint command failed: " + err);
   }
@@ -549,7 +549,7 @@ nlohmann::json GraphClient::raw(const std::vector<std::string>& argv) {
 
   void* r = redisCommandArgv(ctx_, static_cast<int>(argv.size()), argv_ptrs.data(), argv_lens.data());
   if (!r) {
-    std::string err = ctx_ && ctx_->errstr ? ctx_->errstr : "null redis reply";
+    std::string err = (ctx_ && ctx_->errstr[0] != '\0') ? ctx_->errstr : "null redis reply";
     disconnect();
     throw gs::Error(ErrorCode::DB_UNAVAILABLE, "Redis raw command failed: " + err);
   }
