@@ -7,6 +7,7 @@ function(gs_apply_warnings target)
       -Wall -Wextra -Werror
       -Wno-missing-field-initializers
       -Wno-unused-parameter
+      -Wno-pedantic
     )
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
       target_compile_options(${target} PRIVATE -Wno-unknown-warning-option)

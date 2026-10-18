@@ -17,7 +17,15 @@ jobs:
         if: runner.os == 'Windows'
       - uses: seanmiddleditch/gha-setup-ninja@v5
       - run: cmake --preset ${{ matrix.preset }}
-      - run: cmake --build --preset ${{ matrix.preset }}
+      - name: Build
+        shell: bash
+        run: |
+          set -o pipefail
+          cmake --build --preset ${{ matrix.preset }} 2>&1 | tee build.log || {
+            ERR=$(tail -n 30 build.log | tr '\r\n' ' ')
+            echo "::error title=Build Failure on ${{ matrix.preset }}::$ERR"
+            exit 1
+          }
       - run: ctest --preset ${{ matrix.preset }} -L unit
   db-tests:
     runs-on: ubuntu-24.04
@@ -28,5 +36,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: seanmiddleditch/gha-setup-ninja@v5
-      - run: cmake --preset linux-release && cmake --build --preset linux-release
+      - run: cmake --preset linux-release
+      - name: Build
+        shell: bash
+        run: |
+          set -o pipefail
+          cmake --build --preset linux-release 2>&1 | tee build.log || {
+            ERR=$(tail -n 30 build.log | tr '\r\n' ' ')
+            echo "::error title=Build Failure on db-tests::$ERR"
+            exit 1
+          }
       - run: ctest --preset linux-release -L "db|e2e"

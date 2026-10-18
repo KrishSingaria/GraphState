@@ -27,7 +27,13 @@ endif()
 
 add_library(graphstate_core STATIC ${GS_SOURCES})
 target_include_directories(graphstate_core PUBLIC src)
-target_include_directories(graphstate_core SYSTEM PUBLIC ${CMAKE_BINARY_DIR}/generated ${xxhash_SOURCE_DIR})
+target_include_directories(graphstate_core SYSTEM PUBLIC
+  ${CMAKE_BINARY_DIR}/generated
+  ${xxhash_SOURCE_DIR}
+  ${hiredis_SOURCE_DIR}
+  ${treesitter_SOURCE_DIR}/lib/include
+  ${json_SOURCE_DIR}/include
+)
 target_link_libraries(graphstate_core PUBLIC tree-sitter gs_grammars hiredis::hiredis nlohmann_json::nlohmann_json Threads::Threads)
 gs_apply_warnings(graphstate_core)
 
