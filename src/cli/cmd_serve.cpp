@@ -38,9 +38,13 @@ int cmd_serve(int argc, char* argv[]) {
     }
 
     // Enter MCP loop over stdio
-    mcp::StdioTransport transport;
-    mcp::Server server(engine, transport);
-    server.run();
+    try {
+      mcp::StdioTransport transport;
+      mcp::Server server(engine, transport);
+      server.run();
+    } catch (const std::exception& e) {
+      std::cerr << "Error in MCP server: " << e.what() << "\n";
+    }
 
     return 0;
   } catch (const std::exception& e) {

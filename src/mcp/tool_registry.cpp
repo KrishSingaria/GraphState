@@ -31,7 +31,7 @@ ToolRegistry::ToolRegistry() = default;
 void ToolRegistry::add(Tool tool) {
   if (!tool.render) {
     tool.render = [](const nlohmann::json& j) {
-      return j.dump();
+      return j.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace);
     };
   }
 

@@ -59,13 +59,20 @@ void Server::run() {
       continue;
     }
 
-    auto resp = handle_message(msg);
-    if (resp.has_value()) {
-      transport_.send_json(*resp);
+    try {
+      auto resp = handle_message(msg);
+      if (resp.has_value()) {
+        transport_.send_json(*resp);
+      }
+    } catch (const std::exception& e) {
+      nlohmann::json id = (msg.is_object() && msg.contains("id")) ? msg["id"] : nullptr;
+      transport_.send_json(make_error(id, -32603, std::string("Internal error: ") + e.what()));
     }
   }
 
-  engine_.sessions().end_on_shutdown();
+  try {
+    engine_.sessions().end_on_shutdown();
+  } catch (...) {}
 }
 
 std::optional<nlohmann::json> Server::handle_message(const nlohmann::json& msg) {
@@ -262,7 +269,7 @@ nlohmann::json Server::on_tools_call(const nlohmann::json& id, const nlohmann::j
   try {
     std::unique_lock<std::mutex> lock(engine_.state_mutex());
     nlohmann::json structured = tool->handler(ctx, args);
-    std::string rendered = tool->render ? tool->render(structured) : structured.dump();
+    std::string rendered = tool->render ? tool->render(structured) : structured.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace);
 
     tool_result = {
         {"content", {{{"type", "text"}, {"text", rendered}}}},

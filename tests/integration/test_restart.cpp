@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include "core/clock.hpp"
 #include "core/config.hpp"
 #include "core/engine.hpp"
 #include "db/queries.hpp"
@@ -27,6 +28,9 @@ std::pair<std::string, int> get_falkor_endpoint() {
     } else {
       host = s;
     }
+  } else {
+    if (const char* h = std::getenv("GRAPHSTATE_FALKOR_HOST")) host = h;
+    if (const char* p = std::getenv("GRAPHSTATE_FALKOR_PORT")) port = std::atoi(p);
   }
   return {host, port};
 }
@@ -181,6 +185,18 @@ TEST_CASE("Restart: Mark abandoned session INTERRUPTED on startup") {
     REQUIRE(!abandoned_session_id.empty());
   }
 
+  // Simulate an interrupted/crashed process (where clean shutdown didn't happen):
+  // Reset status to ACTIVE and backdate last_seen_at past the 120s cutoff (§7.2)
+  {
+    int64_t old_ts = core::now_ms() - 150'000;
+    client.exec(config.project_graph(), db::Query{
+        .name = "simulate_crashed_session",
+        .cypher = "MATCH (s:Session {id: $id}) SET s.status = 'ACTIVE', s.last_seen_at = $ts",
+        .params = {{"id", abandoned_session_id}, {"ts", old_ts}},
+        .read_only = false
+    });
+  }
+
   // Session 2: Start new engine instance, initialize() must mark previous session INTERRUPTED
   {
     Engine engine(config);
@@ -195,5 +211,7 @@ TEST_CASE("Restart: Mark abandoned session INTERRUPTED on startup") {
 
     REQUIRE(!rows.empty());
     CHECK(rows[0]["status"] == "INTERRUPTED");
+
+    engine.client().delete_graph(engine.config().project_graph());
   }
 }

@@ -27,8 +27,28 @@ std::pair<std::string, int> get_falkor_endpoint() {
     } else {
       host = s;
     }
+  } else {
+    if (const char* h = std::getenv("GRAPHSTATE_FALKOR_HOST")) host = h;
+    if (const char* p = std::getenv("GRAPHSTATE_FALKOR_PORT")) port = std::atoi(p);
   }
   return {host, port};
+}
+
+std::filesystem::path get_benchmark_project_path() {
+#ifdef GS_TEST_FIXTURES_DIR
+  auto p = std::filesystem::path(GS_TEST_FIXTURES_DIR) / "benchmark_project";
+  if (std::filesystem::exists(p)) return p;
+#endif
+  std::vector<std::filesystem::path> candidates = {
+      std::filesystem::current_path() / "tests" / "fixtures" / "benchmark_project",
+      std::filesystem::current_path() / "fixtures" / "benchmark_project",
+      std::filesystem::current_path().parent_path() / "tests" / "fixtures" / "benchmark_project",
+      std::filesystem::current_path().parent_path().parent_path() / "tests" / "fixtures" / "benchmark_project"
+  };
+  for (const auto& c : candidates) {
+    if (std::filesystem::exists(c)) return c;
+  }
+  return candidates[0];
 }
 
 } // namespace
@@ -43,7 +63,7 @@ TEST_CASE("integration: Memory Subgraph against FalkorDB") {
   }
 
   core::Config config;
-  config.root = std::filesystem::current_path() / "tests" / "fixtures" / "benchmark_project";
+  config.root = get_benchmark_project_path();
   config.falkordb.host = host;
   config.falkordb.port = port;
 

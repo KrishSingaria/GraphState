@@ -25,8 +25,28 @@ std::pair<std::string, int> get_falkor_endpoint() {
     } else {
       host = s;
     }
+  } else {
+    if (const char* h = std::getenv("GRAPHSTATE_FALKOR_HOST")) host = h;
+    if (const char* p = std::getenv("GRAPHSTATE_FALKOR_PORT")) port = std::atoi(p);
   }
   return {host, port};
+}
+
+std::filesystem::path get_benchmark_project_path() {
+#ifdef GS_TEST_FIXTURES_DIR
+  auto p = std::filesystem::path(GS_TEST_FIXTURES_DIR) / "benchmark_project";
+  if (std::filesystem::exists(p)) return p;
+#endif
+  std::vector<std::filesystem::path> candidates = {
+      std::filesystem::current_path() / "tests" / "fixtures" / "benchmark_project",
+      std::filesystem::current_path() / "fixtures" / "benchmark_project",
+      std::filesystem::current_path().parent_path() / "tests" / "fixtures" / "benchmark_project",
+      std::filesystem::current_path().parent_path().parent_path() / "tests" / "fixtures" / "benchmark_project"
+  };
+  for (const auto& c : candidates) {
+    if (std::filesystem::exists(c)) return c;
+  }
+  return candidates[0];
 }
 
 } // namespace
@@ -40,10 +60,7 @@ TEST_CASE("integration: Gate Verification against benchmark_project") {
   }
 
   // Use temporary copy of benchmark_project so tests don't modify repository fixtures
-  std::filesystem::path fixture_root = std::filesystem::current_path() / "tests" / "fixtures" / "benchmark_project";
-  if (!std::filesystem::exists(fixture_root)) {
-    fixture_root = std::filesystem::path("G:/GraphState/tests/fixtures/benchmark_project");
-  }
+  std::filesystem::path fixture_root = get_benchmark_project_path();
   REQUIRE(std::filesystem::exists(fixture_root));
 
   std::filesystem::path temp_root = std::filesystem::temp_directory_path() / ("gs_test_gate_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));

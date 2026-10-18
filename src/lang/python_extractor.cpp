@@ -22,14 +22,14 @@ std::string_view node_text(TSNode node, std::string_view src) {
   return src.substr(sb, eb - sb);
 }
 
-std::string trim_str(std::string_view s) {
+std::string_view trim_str(std::string_view s) {
   while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
     s.remove_prefix(1);
   }
   while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
     s.remove_suffix(1);
   }
-  return std::string(s);
+  return s;
 }
 
 std::string strip_quotes(std::string_view s) {
@@ -45,11 +45,11 @@ std::string strip_quotes(std::string_view s) {
   if (nl != std::string_view::npos) {
     s = s.substr(0, nl);
   }
-  std::string out = trim_str(s);
-  if (out.size() > 160) {
-    out = out.substr(0, 160);
+  std::string_view trimmed = trim_str(s);
+  if (trimmed.size() > 160) {
+    trimmed = trimmed.substr(0, 160);
   }
-  return out;
+  return std::string(trimmed);
 }
 
 std::string extract_decorator_name(TSNode dec_node, std::string_view src) {
@@ -61,7 +61,7 @@ std::string extract_decorator_name(TSNode dec_node, std::string_view src) {
   if (p != std::string_view::npos) {
     txt = txt.substr(0, p);
   }
-  return trim_str(txt);
+  return std::string(trim_str(txt));
 }
 
 void collect_assigned_identifiers(TSNode node, std::string_view src, std::vector<std::string>& out) {
@@ -245,7 +245,7 @@ private:
       if (rt.starts_with("->")) {
         rt.remove_prefix(2);
       }
-      sym.sig.return_type = trim_str(rt);
+      sym.sig.return_type = std::string(trim_str(rt));
     }
 
     // Parameters
@@ -338,7 +338,7 @@ private:
         }
         TSNode t_node = ts_node_child_by_field_name(child, "type", 4);
         if (!ts_node_is_null(t_node)) {
-          p.type = trim_str(node_text(t_node, src));
+          p.type = std::string(trim_str(node_text(t_node, src)));
         }
       } else if (type == "default_parameter") {
         TSNode name_n = ts_node_child_by_field_name(child, "name", 4);
@@ -350,7 +350,7 @@ private:
         p.has_default = true;
         TSNode t_node = ts_node_child_by_field_name(child, "type", 4);
         if (!ts_node_is_null(t_node)) {
-          p.type = trim_str(node_text(t_node, src));
+          p.type = std::string(trim_str(node_text(t_node, src)));
         }
       } else if (type == "list_splat_pattern") {
         p.kind = ParamKind::VarPositional;
@@ -543,7 +543,7 @@ private:
         break;
       }
     }
-    cf.text = trim_str(sline);
+    cf.text = std::string(trim_str(sline));
 
     TSNode fn_node = ts_node_child_by_field_name(call_node, "function", 8);
     if (!ts_node_is_null(fn_node)) {

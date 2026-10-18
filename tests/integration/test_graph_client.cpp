@@ -25,6 +25,9 @@ std::pair<std::string, int> get_falkor_endpoint() {
     } else {
       host = s;
     }
+  } else {
+    if (const char* h = std::getenv("GRAPHSTATE_FALKOR_HOST")) host = h;
+    if (const char* p = std::getenv("GRAPHSTATE_FALKOR_PORT")) port = std::atoi(p);
   }
   return {host, port};
 }

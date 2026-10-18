@@ -216,7 +216,7 @@ private:
       if (rtxt.starts_with(":")) {
         rtxt.remove_prefix(1);
       }
-      sym.sig.return_type = ts::trim_str(rtxt);
+      sym.sig.return_type = std::string(ts::trim_str(rtxt));
     }
 
     // Parameters
@@ -278,7 +278,7 @@ private:
       if (rtxt.starts_with(":")) {
         rtxt.remove_prefix(1);
       }
-      sym.sig.return_type = ts::trim_str(rtxt);
+      sym.sig.return_type = std::string(ts::trim_str(rtxt));
     }
 
     // Parameters (either 'parameter' or 'parameters')
@@ -464,7 +464,7 @@ private:
       if (rtxt.starts_with(":")) {
         rtxt.remove_prefix(1);
       }
-      sym.sig.return_type = ts::trim_str(rtxt);
+      sym.sig.return_type = std::string(ts::trim_str(rtxt));
     }
 
     // Parameters

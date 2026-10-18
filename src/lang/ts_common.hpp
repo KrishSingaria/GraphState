@@ -9,7 +9,7 @@
 namespace gs::lang::ts {
 
 std::string_view node_text(TSNode node, std::string_view src);
-std::string trim_str(std::string_view s);
+std::string_view trim_str(std::string_view s);
 std::string strip_quotes(std::string_view s);
 std::string extract_jsdoc(TSNode node, std::string_view src);
 

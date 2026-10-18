@@ -1,5 +1,7 @@
 # tests/CMakeLists.txt
 
+add_compile_definitions(GS_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+
 add_executable(test_unit
   unit/test_version.cpp
   unit/test_grammars.cpp

@@ -14,14 +14,14 @@ std::string_view node_text(TSNode node, std::string_view src) {
   return src.substr(sb, eb - sb);
 }
 
-std::string trim_str(std::string_view s) {
+std::string_view trim_str(std::string_view s) {
   while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) {
     s.remove_prefix(1);
   }
   while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) {
     s.remove_suffix(1);
   }
-  return std::string(s);
+  return s;
 }
 
 std::string strip_quotes(std::string_view s) {
@@ -45,14 +45,14 @@ std::string extract_jsdoc(TSNode node, std::string_view src) {
       if (nl != std::string_view::npos) {
         ctext = ctext.substr(0, nl);
       }
-      std::string doc = trim_str(ctext);
+      std::string_view doc = trim_str(ctext);
       while (doc.starts_with("*")) {
         doc = trim_str(doc.substr(1));
       }
       if (doc.size() > 160) {
         doc = doc.substr(0, 160);
       }
-      return doc;
+      return std::string(doc);
     }
   }
   return "";
@@ -107,7 +107,7 @@ void parse_single_param(TSNode node, std::vector<Param>& out, std::string_view s
       if (ttext.starts_with(":")) {
         ttext.remove_prefix(1);
       }
-      p.type = trim_str(ttext);
+      p.type = std::string(trim_str(ttext));
     }
   } else if (type == "assignment_pattern") {
     TSNode left = ts_node_child_by_field_name(node, "left", 4);
@@ -173,7 +173,7 @@ void extract_call(TSNode call_node, const std::string& caller_id, std::vector<Ca
       break;
     }
   }
-  cf.text = trim_str(sline);
+  cf.text = std::string(trim_str(sline));
 
   TSNode fn_node = ts_node_child_by_field_name(call_node, "function", 8);
   if (!ts_node_is_null(fn_node)) {
@@ -238,7 +238,7 @@ void extract_new(TSNode new_node, const std::string& caller_id, std::vector<Call
       break;
     }
   }
-  cf.text = trim_str(sline);
+  cf.text = std::string(trim_str(sline));
 
   TSNode ctor_node = ts_node_child_by_field_name(new_node, "constructor", 11);
   if (!ts_node_is_null(ctor_node)) {

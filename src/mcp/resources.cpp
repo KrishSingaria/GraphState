@@ -58,7 +58,7 @@ nlohmann::json handle_resources_read(Engine& engine, std::string_view uri) {
             {
                 {"uri", "graphstate://rules"},
                 {"mimeType", "application/json"},
-                {"text", rules.dump(2)}
+                {"text", rules.dump(2, ' ', false, nlohmann::json::error_handler_t::replace)}
             }
         }}
     };
