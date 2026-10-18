@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GraphState — Pitch Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #090a0f;
+    --card-bg: #11131a;
+    --card-bg-subtle: #161822;
+    --card-border: rgba(255, 255, 255, 0.08);
+    --card-border-active: rgba(99, 102, 241, 0.4);
+    --text-main: #f3f4f6;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --accent: #6366f1;
+    --accent-glow: rgba(99, 102, 241, 0.15);
+    --accent-emerald: #10b981;
+    --accent-rose: #f43f5e;
+    --accent-amber: #f59e0b;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Top Navigation Bar */
+  header {
+    height: 56px;
+    padding: 0 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--card-border);
+    background: rgba(9, 10, 15, 0.85);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: -0.02em;
+  }
+
+  .brand-badge {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(99, 102, 241, 0.12);
+    color: #a5b4fc;
+    border: 1px solid rgba(99, 102, 241, 0.25);
+  }
+
+  .nav-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .kbd-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--card-bg-subtle);
+    border: 1px solid var(--card-border);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+  }
+
+  .progress-bar-container {
+    position: fixed;
+    top: 55px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.05);
+    z-index: 101;
+  }
+
+  .progress-bar {
+    height: 100%;
+    width: 20%;
+    background: linear-gradient(90deg, #6366f1, #a855f7);
+    transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Deck Stage & Slides */
+  .deck-stage {
+    flex: 1;
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 56px - 48px);
+    overflow: hidden;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    padding: 40px 60px;
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.985) translateY(12px);
+    transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 1380px;
+    margin: 0 auto;
+  }
+
+  .slide.active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scale(1) translateY(0);
+  }
+
+  /* Typography */
+  .tagline {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #818cf8;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tagline::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #6366f1;
+    box-shadow: 0 0 10px #6366f1;
+  }
+
+  h1.slide-title {
+    font-size: 3.1rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+    margin-bottom: 16px;
+    color: #ffffff;
+  }
+
+  h2.slide-title {
+    font-size: 2.25rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+    margin-bottom: 14px;
+    color: #ffffff;
+  }
+
+  p.slide-sub {
+    font-size: 1.12rem;
+    color: var(--text-muted);
+    max-width: 820px;
+    margin-bottom: 32px;
+    line-height: 1.6;
+  }
+
+  /* Bento Layouts */
+  .bento-grid {
+    display: grid;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .bento-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .bento-card:hover {
+    border-color: var(--card-border-active);
+    background: #141620;
+  }
+
+  .card-label {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .card-metric {
+    font-family: var(--font-mono);
+    font-size: 2.1rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: #ffffff;
+    margin-bottom: 6px;
+  }
+
+  .card-metric.green { color: var(--accent-emerald); }
+  .card-metric.indigo { color: #a5b4fc; }
+  .card-metric.rose { color: var(--accent-rose); }
+
+  .card-text {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* Code & Terminals inside slides */
+  .terminal-box {
+    background: #06070a;
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: #cbd5e1;
+    line-height: 1.6;
+    overflow-x: auto;
+  }
+
+  .token-red { color: #f87171; }
+  .token-green { color: #34d399; }
+  .token-indigo { color: #818cf8; }
+  .token-yellow { color: #fbbf24; }
+  .token-dim { color: #64748b; }
+
+  /* Comparison Columns */
+  .diff-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+
+  .diff-table th {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--card-border);
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+  }
+
+  .diff-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    color: var(--text-muted);
+  }
+
+  .diff-table tr:last-child td { border-bottom: none; }
+  .diff-table .highlight { color: #ffffff; font-weight: 600; }
+
+  /* Bottom Bar */
+  footer {
+    height: 48px;
+    padding: 0 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--card-border);
+    background: var(--bg);
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    z-index: 100;
+  }
+
+  .slide-dots {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .dot.active {
+    background: #6366f1;
+    width: 24px;
+    border-radius: 4px;
+  }
+
+  /* Badges & Pills */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+  }
+  .pill.success { background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.25); }
+  .pill.danger { background: rgba(244, 63, 94, 0.12); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.25); }
+  .pill.warning { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.25); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span>GraphState</span>
+    <span class="brand-badge">FalkorDB × WeMakeDevs 2026</span>
+  </div>
+  <div class="nav-controls">
+    <span class="kbd-hint"><span>[ ← ]</span> Prev</span>
+    <span class="kbd-hint"><span>[ → ]</span> Next</span>
+    <span class="kbd-hint"><span>[ F ]</span> Fullscreen</span>
+    <span id="slide-num">01 / 05</span>
+  </div>
+</header>
+
+<div class="progress-bar-container">
+  <div class="progress-bar" id="progress-bar"></div>
+</div>
+
+<main class="deck-stage">
+
+  <!-- SLIDE 1: HERO & VALUE PROP -->
+  <section class="slide active" id="slide-1">
+    <div class="tagline">Deterministic Code Gatekeeper & Graph Memory</div>
+    <h1 class="slide-title">A Bouncer for AI Coding Agents</h1>
+    <p class="slide-sub">
+      Autonomous coding agents write code in an architectural vacuum—silently breaking downstream callers three layers deep.
+      <strong>GraphState</strong> intercepts patches before disk write, verifies repository invariants against a <strong>FalkorDB</strong> call graph, and permanently retains lessons in persistent memory.
+    </p>
+
+    <div class="bento-grid grid-4">
+      <div class="bento-card">
+        <div class="card-label">Compiler Standard</div>
+        <div class="card-metric indigo">C++20</div>
+        <div class="card-text">Strict RAII, zero runtime GC pauses, Tree-sitter native AST integration.</div>
+      </div>
+      <div class="bento-card">
+        <div class="card-label">Relational Compute</div>
+        <div class="card-metric green">&lt; 0.01 ms</div>
+        <div class="card-text">Sub-millisecond 3-hop blast-radius Cypher traversals in FalkorDB.</div>
+      </div>
+      <div class="bento-card">
+        <div class="card-label">Runtime Footprint</div>
+        <div class="card-metric">8.99 MB</div>
+        <div class="card-text">Ultra-lean background daemon memory, tested on standard developer hardware.</div>
+      </div>
+      <div class="bento-card">
+        <div class="card-label">Broken References</div>
+        <div class="card-metric green">0 (Zero)</div>
+        <div class="card-text">100% elimination of uncompilable code and broken references across 10 OSS tasks.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 2: THE PROBLEM & WHY GATEKEEPING IN CRITICAL SYSTEMS -->
+  <section class="slide" id="slide-2">
+    <div class="tagline">The 3 A.M. Vulnerability</div>
+    <h2 class="slide-title">Why Mission-Critical Systems Need a Gatekeeper</h2>
+    <p class="slide-sub">
+      Raw LLM agents edit files as isolated text streams. In high-stakes environments—fintech transaction systems, core infrastructure, and enterprise libraries—an unconstrained agent introduces silent blast-radius disasters.
+    </p>
+
+    <div class="bento-grid grid-2">
+      <div class="bento-card" style="border-left: 3px solid var(--accent-rose);">
+        <div class="card-label" style="color: var(--accent-rose);">Standard Agent (Trial & Error on Disk)</div>
+        <div class="terminal-box" style="margin-top: 8px;">
+          <span class="token-dim"># Agent prompt: "Add currency param to calculate_total"</span><br>
+          <span class="token-yellow">→ Modified billing.py</span>: def calculate_total(items, currency, tax_rate)<br>
+          <span class="token-red">✖ checkout.py:42</span>: calculate_total(cart, 0.08) <span class="token-red">[BROKEN CALLER]</span><br>
+          <span class="token-red">✖ reports.py:118</span>: calculate_total(summary, 0.05) <span class="token-red">[TYPE ERROR]</span><br>
+          <span class="token-dim"># Next morning: Production crashes, 4 services down</span>
+        </div>
+        <p class="card-text" style="margin-top: 14px;">
+          Agents cannot see what they don't look at. Reading tools alone don't prevent unconstrained writes.
+        </p>
+      </div>
+
+      <div class="bento-card" style="border-left: 3px solid var(--accent-emerald);">
+        <div class="card-label" style="color: var(--accent-emerald);">GraphState (Deterministic Pre-Commit Gate)</div>
+        <div class="terminal-box" style="margin-top: 8px;">
+          <span class="token-dim"># Agent proposes partial patch via MCP propose_patch</span><br>
+          <span class="token-indigo">[Phase 2: Call-Binding Verification]</span> Traversing FalkorDB graph...<br>
+          <span class="token-red">GATE REJECTION [CALLER_ARITY_MISMATCH]</span><br>
+          <span class="token-dim">Required arity: 3, Provided: 2 in checkout.py:42 & reports.py:118</span><br>
+          <span class="token-green">✓ Filesystem protected: Zero corrupted files touch disk.</span>
+        </div>
+        <p class="card-text" style="margin-top: 14px;">
+          Atomic 5-phase verification: AST syntax, call bindings, blast-radius reachability, imports, and AST rules.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 3: TECH STACK (C++20 & FALKORDB) -->
+  <section class="slide" id="slide-3">
+    <div class="tagline">Engineering Architecture</div>
+    <h2 class="slide-title">Why C++20 and Why FalkorDB?</h2>
+    <p class="slide-sub">
+      Building a real-time gatekeeper requires microsecond response times so conversational coding agents never experience latency lag.
+    </p>
+
+    <div class="bento-grid grid-3">
+      <div class="bento-card">
+        <div class="card-label">Deterministic Core</div>
+        <div class="card-metric indigo">C++20 Engine</div>
+        <p class="card-text">
+          Direct Tree-sitter C API bindings. AST extraction in &lt;1 ms. Atomic Write-Ahead Journal (WAL) guarantees rollback on unexpected crash.
+        </p>
+        <div style="margin-top: 16px;">
+          <span class="pill success">Strict RAII</span>
+          <span class="pill success">Zero Raw New</span>
+        </div>
+      </div>
+
+      <div class="bento-card">
+        <div class="card-label">Relational Graph Compute</div>
+        <div class="card-metric green">FalkorDB v6</div>
+        <p class="card-text">
+          Executes multi-hop Cypher queries across thousands of nodes in sub-millisecond latency. Computes in-graph <strong>PageRank</strong> to flag load-bearing symbols.
+        </p>
+        <div style="margin-top: 16px;">
+          <span class="pill warning">MATCH (c)-[:CALLS*1..3]-&gt;(t)</span>
+        </div>
+      </div>
+
+      <div class="bento-card">
+        <div class="card-label">Persistent Memory Engine</div>
+        <div class="card-metric">Dual-Graph</div>
+        <p class="card-text">
+          Rejections automatically materialize as <code>Pitfall</code> nodes. On session start, <code>get_briefing</code> injects past mistakes so the agent never repeats them.
+        </p>
+        <div style="margin-top: 16px;">
+          <span class="pill success">Project Graph</span>
+          <span class="pill success">User Graph</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 4: 50/50 EVALUATION & FAQS -->
+  <section class="slide" id="slide-4">
+    <div class="tagline">Rigorous OSS Evaluation</div>
+    <h2 class="slide-title">Real-World Findings: The 50/50 Reality</h2>
+    <p class="slide-sub">
+      Evaluated across 10 non-trivial engineering tasks on <code>psf/requests</code> v2.32.3 (~35,000 LOC) comparing Baseline Claude Code vs GraphState Gatekeeper.
+    </p>
+
+    <div class="bento-grid grid-2">
+      <div class="bento-card">
+        <div class="card-label">Empirical Benchmark Summary</div>
+        <table class="diff-table" style="margin-top: 6px;">
+          <tr>
+            <th>Metric</th>
+            <th>Baseline (Arm A)</th>
+            <th>GraphState (Arm B)</th>
+          </tr>
+          <tr>
+            <td class="highlight">Success Rate</td>
+            <td>10/10 (100%)</td>
+            <td><span class="pill success">10/10 (100%)</span></td>
+          </tr>
+          <tr>
+            <td class="highlight">Broken References</td>
+            <td>0</td>
+            <td><span class="pill success">0 (Zero)</span></td>
+          </tr>
+          <tr>
+            <td class="highlight">Token Cost (10 tasks)</td>
+            <td><span class="pill success">$0.20 (Cheaper)</span></td>
+            <td>$0.44</td>
+          </tr>
+          <tr>
+            <td class="highlight">Refactor Turns (OSS-09)</td>
+            <td>46 turns (40 test runs)</td>
+            <td><span class="pill success">22 turns (-52%)</span></td>
+          </tr>
+          <tr>
+            <td class="highlight">Disk Atomicity</td>
+            <td>None (Dirty writes)</td>
+            <td><span class="pill success">Guaranteed (WAL)</span></td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="bento-card">
+        <div class="card-label">Frequently Asked Questions</div>
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+          <div>
+            <div style="font-weight: 600; font-size: 0.88rem; color: #ffffff;">Q: Does the gate slow down the agent?</div>
+            <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 2px;">
+              No. Verification takes &lt;10 ms. By giving the agent upfront caller coordinates, it avoids trial-and-error thrashing, cutting complex refactor turns in half.
+            </div>
+          </div>
+          <div>
+            <div style="font-weight: 600; font-size: 0.88rem; color: #ffffff;">Q: What happens if the power cuts or engine crashes?</div>
+            <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 2px;">
+              Disk is authoritative. The Write-Ahead Journal (WAL) restores half-written files on restart, while FalkorDB persists memories via AOF.
+            </div>
+          </div>
+          <div>
+            <div style="font-weight: 600; font-size: 0.88rem; color: #ffffff;">Q: When is GraphState best utilized?</div>
+            <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 2px;">
+              Critical systems, automated pipelines, and shared libraries where unverified filesystem edits are unacceptable.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 5: LIVE DEMO PROBLEM STATEMENT -->
+  <section class="slide" id="slide-5">
+    <div class="tagline">Live Proof of Concept</div>
+    <h2 class="slide-title">Task OSS-01: Signature Refactoring</h2>
+    <p class="slide-sub">
+      We now switch to a live terminal session running Claude Code on <code>claude-3-5-haiku</code> inside <code>psf/requests</code> with GraphState MCP enabled.
+    </p>
+
+    <div class="bento-grid grid-2">
+      <div class="bento-card">
+        <div class="card-label">The Engineering Challenge</div>
+        <div style="margin-top: 8px;">
+          <p style="font-size: 0.95rem; color: #ffffff; font-weight: 600; margin-bottom: 8px;">
+            Target: <code>requests/adapters.py</code> → <code>BaseAdapter.send</code>
+          </p>
+          <div class="terminal-box" style="margin-bottom: 12px;">
+            # Required modification:<br>
+            def send(self, request, <span class="token-yellow">connection_timeout</span>, stream=False, timeout=None...)
+          </div>
+          <p class="card-text">
+            <strong>The Blast Radius:</strong> <code>HTTPAdapter.send</code> inherits this contract, while <code>Session.send</code> in <code>requests/sessions.py</code> invokes it directly.
+            If the agent updates only <code>adapters.py</code>, the gate bouncer catches it instantly.
+          </p>
+        </div>
+      </div>
+
+      <div class="bento-card" style="justify-content: center; align-items: center; text-align: center; background: radial-gradient(circle, rgba(99,102,241,0.08) 0%, rgba(17,19,26,1) 70%);">
+        <div class="pill warning" style="margin-bottom: 16px;">LIVE DEMO TRANSITION</div>
+        <div style="font-size: 1.4rem; font-weight: 700; color: #ffffff; margin-bottom: 12px;">
+          Switching to Claude Code Terminal
+        </div>
+        <p class="card-text" style="max-width: 420px; margin-bottom: 20px;">
+          Watch GraphState inspect the blast radius, reject partial edits, and guide Haiku to an atomic multi-caller commit.
+        </p>
+        <span class="brand-badge">claude --model claude-3-5-haiku</span>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div>Use Left / Right arrow keys to navigate · Press [ F ] for Fullscreen</div>
+  <div class="slide-dots" id="slide-dots">
+    <div class="dot active" onclick="goToSlide(0)"></div>
+    <div class="dot" onclick="goToSlide(1)"></div>
+    <div class="dot" onclick="goToSlide(2)"></div>
+    <div class="dot" onclick="goToSlide(3)"></div>
+    <div class="dot" onclick="goToSlide(4)"></div>
+  </div>
+  <div>GraphState © 2026 · WeMakeDevs FalkorDB Hackathon</div>
+</footer>
+
+<script>
+  let currentSlide = 0;
+  const slides = document.querySelectorAll('.slide');
+  const dots = document.querySelectorAll('.dot');
+  const slideNumEl = document.getElementById('slide-num');
+  const progressBar = document.getElementById('progress-bar');
+  const totalSlides = slides.length;
+
+  function updateSlide(index) {
+    if (index < 0 || index >= totalSlides) return;
+    slides[currentSlide].classList.remove('active');
+    dots[currentSlide].classList.remove('active');
+    
+    currentSlide = index;
+    slides[currentSlide].classList.add('active');
+    dots[currentSlide].classList.add('active');
+    
+    slideNumEl.textContent = `0${currentSlide + 1} / 0${totalSlides}`;
+    progressBar.style.width = `${((currentSlide + 1) / totalSlides) * 100}%`;
+  }
+
+  function goToSlide(index) {
+    updateSlide(index);
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+      updateSlide(currentSlide + 1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+      updateSlide(currentSlide - 1);
+    } else if (e.key === 'f' || e.key === 'F') {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  });
+</script>
+
+</body>
+</html>
