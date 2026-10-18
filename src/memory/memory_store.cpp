@@ -390,6 +390,16 @@ RecallResult MemoryStore::recall(const RecallRequest& req, const SessionCtx& ses
                 .params = {{"q", q_clean}, {"limit", req.limit}},
                 .read_only = true
             });
+            if (rows.empty() && !req.query.empty()) {
+              rows = engine_.client().rows(engine_.config().project_graph(), db::Query{
+                  .name = "recall_memory_project_fallback",
+                  .cypher = "MATCH (node:Memory) WHERE node.archived = false AND toLower(node.content) CONTAINS toLower($q) "
+                            "RETURN toJSON({type: 'memory', id: node.id, kind: node.kind, scope: node.scope, content: node.content, "
+                            "anchors: node.anchors, updated_at: node.updated_at, score: 50.0}) AS j LIMIT $limit",
+                  .params = {{"q", req.query}, {"limit", req.limit}},
+                  .read_only = true
+              });
+            }
             for (const auto& r : rows) {
               ScoredRawItem s;
               s.item.type = "memory";
@@ -415,6 +425,16 @@ RecallResult MemoryStore::recall(const RecallRequest& req, const SessionCtx& ses
                 .params = {{"q", q_clean}, {"limit", req.limit}},
                 .read_only = true
             });
+            if (rows.empty() && !req.query.empty()) {
+              rows = engine_.client().rows(engine_.config().user_graph(), db::Query{
+                  .name = "recall_memory_user_fallback",
+                  .cypher = "MATCH (node:Memory) WHERE node.archived = false AND toLower(node.content) CONTAINS toLower($q) "
+                            "RETURN toJSON({type: 'memory', id: node.id, kind: node.kind, scope: node.scope, content: node.content, "
+                            "anchors: node.anchors, updated_at: node.updated_at, score: 50.0}) AS j LIMIT $limit",
+                  .params = {{"q", req.query}, {"limit", req.limit}},
+                  .read_only = true
+              });
+            }
             for (const auto& r : rows) {
               ScoredRawItem s;
               s.item.type = "memory";

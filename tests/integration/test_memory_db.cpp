@@ -109,6 +109,7 @@ TEST_CASE("integration: Memory Subgraph against FalkorDB") {
   // 3. Recall
   RecallRequest rreq;
   rreq.query = "Decimal money";
+  rreq.about = "billing.py";
   rreq.limit = 5;
   auto rres = mem.recall(rreq, ctx);
   CHECK(!rres.results.empty());
