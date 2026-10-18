@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e1b4b" />
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#a855f7" />
+    </linearGradient>
+    <linearGradient id="falkorGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f97316" />
+      <stop offset="100%" stop-color="#ef4444" />
+    </linearGradient>
+    <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="500" rx="16" fill="url(#bgGrad)" />
+
+  <!-- Title & Tagline -->
+  <text x="450" y="45" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="700" fill="#f8fafc">GraphState Architecture Overview</text>
+  <text x="450" y="70" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="400" fill="#94a3b8">Deterministic Code Gatekeeper &amp; Persistent Graph Memory Powered by FalkorDB</text>
+
+  <!-- 1. Agent Host Box -->
+  <g transform="translate(50, 100)">
+    <rect width="220" height="150" rx="12" fill="url(#cardGrad)" stroke="#334155" stroke-width="1.5" filter="url(#shadow)" />
+    <rect x="0" y="0" width="220" height="38" rx="12" fill="#334155" opacity="0.4" />
+    <text x="110" y="25" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="600" fill="#e2e8f0">AI Agent Host</text>
+    <text x="110" y="70" text-anchor="middle" font-family="sans-serif" font-size="13" font-weight="500" fill="#cbd5e1">Claude Code / Cursor</text>
+    <text x="110" y="95" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#94a3b8">IDE / Antigravity</text>
+    <rect x="30" y="112" width="160" height="24" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+    <text x="110" y="128" text-anchor="middle" font-family="monospace" font-size="11" fill="#38bdf8">propose_patch / read</text>
+  </g>
+
+  <!-- Arrow: Agent -> Core -->
+  <path d="M 270 175 L 340 175" stroke="url(#accentGrad)" stroke-width="2.5" marker-end="url(#arrow)" />
+  <text x="305" y="165" text-anchor="middle" font-family="monospace" font-size="10" fill="#c084fc">MCP (stdio)</text>
+
+  <!-- 2. GraphState Core Box -->
+  <g transform="translate(345, 100)">
+    <rect width="505" height="230" rx="12" fill="url(#cardGrad)" stroke="#4f46e5" stroke-width="2" filter="url(#shadow)" />
+    <rect x="0" y="0" width="505" height="38" rx="12" fill="#4338ca" opacity="0.3" />
+    <text x="252" y="25" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="600" fill="#a5b4fc">GraphState Core Engine (C++20)</text>
+
+    <!-- MCP Server block -->
+    <rect x="20" y="55" width="135" height="70" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1" />
+    <text x="87" y="85" text-anchor="middle" font-family="sans-serif" font-size="13" font-weight="600" fill="#f1f5f9">MCP Server</text>
+    <text x="87" y="105" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#94a3b8">JSON-RPC / stdio</text>
+
+    <!-- Arrow MCP -> Gate -->
+    <path d="M 155 90 L 195 90" stroke="#818cf8" stroke-width="2" />
+
+    <!-- 5-Phase Gatekeeper block -->
+    <rect x="195" y="55" width="145" height="150" rx="8" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5" />
+    <text x="267" y="78" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="#c7d2fe">5-Phase Gatekeeper</text>
+    <text x="267" y="100" text-anchor="middle" font-family="monospace" font-size="10" fill="#93c5fd">P1: Path Sanitizer</text>
+    <text x="267" y="120" text-anchor="middle" font-family="monospace" font-size="10" fill="#93c5fd">P2: AST Syntax</text>
+    <text x="267" y="140" text-anchor="middle" font-family="monospace" font-size="10" fill="#93c5fd">P3: Signatures</text>
+    <text x="267" y="160" text-anchor="middle" font-family="monospace" font-size="10" fill="#93c5fd">P4: Call-Binding</text>
+    <text x="267" y="180" text-anchor="middle" font-family="monospace" font-size="10" fill="#a7f3d0">P5: 2PC Atomic Commit</text>
+
+    <!-- In-Memory FactStore -->
+    <rect x="360" y="55" width="125" height="70" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1" />
+    <text x="422" y="85" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="600" fill="#f1f5f9">FactStore</text>
+    <text x="422" y="105" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#94a3b8">Fast AST Cache</text>
+
+    <!-- WAL Disk Journal -->
+    <rect x="360" y="135" width="125" height="70" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1" />
+    <text x="422" y="165" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="600" fill="#34d399">WAL Journal</text>
+    <text x="422" y="185" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#94a3b8">Two-Phase fsync</text>
+
+    <!-- Gate to Store & WAL arrows -->
+    <path d="M 340 90 L 360 90" stroke="#818cf8" stroke-width="1.5" />
+    <path d="M 340 170 L 360 170" stroke="#34d399" stroke-width="1.5" />
+  </g>
+
+  <!-- Bottom Arrows: FalkorDB & Disk -->
+  <path d="M 460 330 L 460 380" stroke="url(#falkorGrad)" stroke-width="2.5" />
+  <text x="390" y="360" text-anchor="middle" font-family="monospace" font-size="10" fill="#fb923c">Cypher Queries</text>
+
+  <path d="M 730 330 L 730 380" stroke="url(#greenGrad)" stroke-width="2.5" />
+  <text x="795" y="360" text-anchor="middle" font-family="monospace" font-size="10" fill="#34d399">Atomic Rename</text>
+
+  <!-- 3. FalkorDB Box -->
+  <g transform="translate(320, 380)">
+    <rect width="280" height="90" rx="12" fill="url(#cardGrad)" stroke="#f97316" stroke-width="1.5" filter="url(#shadow)" />
+    <text x="140" y="28" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="700" fill="#fdba74">FalkorDB Graph Engine</text>
+    <text x="140" y="50" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#cbd5e1">Sparse Matrix Graph Traversal (Sub-ms)</text>
+    <text x="140" y="70" text-anchor="middle" font-family="monospace" font-size="11" fill="#f97316">MATCH (c)-[:CALLS*1..3]->(t)</text>
+  </g>
+
+  <!-- 4. Authoritative Disk Box -->
+  <g transform="translate(630, 380)">
+    <rect width="220" height="90" rx="12" fill="url(#cardGrad)" stroke="#10b981" stroke-width="1.5" filter="url(#shadow)" />
+    <text x="110" y="28" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="700" fill="#6ee7b7">Authoritative Disk Code</text>
+    <text x="110" y="50" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#cbd5e1">Source of Truth</text>
+    <text x="110" y="70" text-anchor="middle" font-family="monospace" font-size="11" fill="#10b981">Zero Corrupted Files</text>
+  </g>
+</svg>

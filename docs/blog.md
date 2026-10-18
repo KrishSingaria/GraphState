@@ -50,29 +50,34 @@ That led me directly to **FalkorDB**.
 
 ### 3. Architecture: Why C++20 and Why FalkorDB?
 
-```mermaid
-graph LR
-    subgraph Agent Host
-        Agent[Claude Code / Cursor / IDE]
-    end
-
-    subgraph GraphState Core [C++20 Engine]
-        MCP[MCP Server / stdio]
-        Gate[5-Phase Gatekeeper]
-        Store[In-Memory FactStore]
-        WAL[Disk Write-Ahead Journal]
-    end
-
-    subgraph Database
-        Falkor[FalkorDB v6 / Redis AOF]
-    end
-
-    Agent <-->|MCP Protocol| MCP
-    MCP --> Gate
-    Gate --> Store
-    Gate -->|Cypher Queries| Falkor
-    Gate -->|Atomic Commit| WAL
-    WAL -->|fsync + rename| Disk[(Authoritative Disk Code)]
+```text
+  +--------------------------------------------------------+
+  |                      Agent Host                        |
+  |           (Claude Code / Cursor / IDE)                 |
+  +---------------------------+----------------------------+
+                              |  MCP Protocol (stdio)
+                              v
+  +--------------------------------------------------------+
+  |                 GraphState Engine (C++20)              |
+  |                                                        |
+  |   +--------------+     +--------------+                |
+  |   |  MCP Server  | --> |   5-Phase    | --> FactStore  |
+  |   |              |     |  Gatekeeper  |     (In-Memory)|
+  |   +--------------+     +------+-------+                |
+  |                               |                        |
+  |                    Atomic WAL | (fsync)                |
+  |                               v                        |
+  |                      +----------------+                |
+  |                      | Disk Journal   |                |
+  |                      +--------+-------+                |
+  +-------------------------------+------------------------+
+                 Cypher Queries   |   Atomic Commit
+                       +----------+----------+
+                       v                     v
+             +------------------+  +------------------+
+             | FalkorDB Graph   |  | Authoritative    |
+             | (Sparse Matrix)  |  | Filesystem Code  |
+             +------------------+  +------------------+
 ```
 
 I built the core engine in **C++20** using Tree-sitter for AST parsing and **FalkorDB** as the graph database.
@@ -196,14 +201,20 @@ To see how GraphState behaves in the wild, I tested it against **`psf/requests`*
 
 The results revealed a fascinating, honest **50/50 trade-off**:
 
-| Metric | Arm A (Baseline) | Arm B (GraphState Gated) | What Happened |
-|---|---|---|---|
-| **Task Success Rate** | 10/10 (100%) | 10/10 (100%) | Both arms solved all 10 tasks |
-| **Broken References Introduced** | 0 | 0 | Zero regressions in final code |
-| **Total Cost (10 tasks)** | **$0.20** | $0.44 | **Arm A is 2.2x cheaper**: No MCP schema overhead on simple tasks |
-| **Average Turns per Task** | 19.7 turns | **19.2 turns** | **Arm B takes fewer turns** overall |
-| **Complex Blast-Radius Task (OSS-09)** | 46 turns (50 edits, 40 test runs) | **22 turns (1 patch, 18 test runs)** | **Arm B cuts turns by 52%**: Zero trial-and-error thrashing |
-| **Filesystem Safety** | Speculative direct writes | **In-memory AST check + atomic WAL** | GraphState guarantees pristine repo state |
+```text
+=============================================================================
+                          EVALUATION RESULTS COMPARISON
+=============================================================================
+Metric                    Arm A (Baseline)     Arm B (GraphState)   Advantage
+-----------------------------------------------------------------------------
+Task Success Rate         10/10 (100%)         10/10 (100%)         Tied
+Broken References         0                    0                    Tied
+Total Cost (10 tasks)     $0.20                $0.44                Arm A (2.2x cheaper)
+Average Turns per Task    19.7 turns           19.2 turns           Arm B (Slight edge)
+OSS-09 Blast Radius Task  46 turns (50 edits)  22 turns (1 patch)   Arm B (52% fewer turns)
+Filesystem Safety         Speculative writes   In-memory check+WAL  Arm B (Guaranteed)
+=============================================================================
+```
 
 #### What Did We Learn?
 1. **Baseline is better for quick, local fixes**: When an agent edits one helper function in isolation, raw text tools don't carry the 8 MCP tool definitions or AST fact payloads. It is lighter and cheaper.
