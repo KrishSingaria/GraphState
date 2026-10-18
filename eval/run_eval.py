@@ -6,6 +6,7 @@ and generates structured JSON output.
 """
 
 import argparse
+import concurrent.futures
 import datetime
 import json
 import os
@@ -37,6 +38,23 @@ def find_graphstate_bin(custom_path=None):
 def load_tasks(tasks_json_path):
     with open(tasks_json_path, "r", encoding="utf-8") as fh:
         return json.load(fh)
+
+def ensure_workspace(ws_path):
+    if not os.path.exists(ws_path):
+        print(f"Workspace path '{ws_path}' does not exist. Auto-provisioning...")
+        os.makedirs(os.path.dirname(ws_path), exist_ok=True)
+        if "requests" in ws_path.lower():
+            cmd = ["git", "clone", "--depth", "1", "--branch", "v2.32.3", "https://github.com/psf/requests.git", ws_path]
+            code, out, err, _, _ = run_cmd(cmd)
+            if code != 0:
+                raise RuntimeError(f"Failed to clone base workspace {ws_path}: {err}")
+            git_dir = os.path.join(ws_path, ".git")
+            if os.path.isdir(git_dir):
+                shutil.rmtree(git_dir, ignore_errors=True)
+            print(f"Successfully provisioned pristine workspace at: {ws_path}")
+        else:
+            raise FileNotFoundError(f"Base workspace path '{ws_path}' not found and no auto-provisioner configured.")
+
 
 def run_cmd(cmd, cwd=None, env=None, timeout=None, shell=None):
     merged_env = os.environ.copy()
@@ -78,6 +96,22 @@ def run_eval_task(task, arm, run_idx, args, ts, base_ws_dir, graphstate_bin):
         code, out, err, _, _ = run_cmd([graphstate_bin, "init", "--host", "claude-code", "--root", run_ws])
         # Run initial index if DB is available (skip error if DB offline)
         run_cmd([graphstate_bin, "index", "--root", run_ws])
+        # Write CLAUDE.md for Claude Code turn 0 context
+        claude_md_path = os.path.join(run_ws, "CLAUDE.md")
+        with open(claude_md_path, "w", encoding="utf-8") as fh:
+            fh.write(
+                "# GraphState Workflow Rules\n\n"
+                "You are working in a GraphState-gated codebase. Direct file edits are disabled.\n"
+                "All changes must be proposed via `mcp__graphstate__propose_patch`.\n\n"
+                "## Efficient Blast-Radius Workflow:\n"
+                "1. Find/read the target symbol with `mcp__graphstate__search_symbols` or `mcp__graphstate__read_symbol`.\n"
+                "2. Call `mcp__graphstate__get_impact` ONCE on the target symbol to reveal all callers across the repo.\n"
+                "3. Submit an ATOMIC patch updating the target symbol AND all affected callers in a SINGLE `mcp__graphstate__propose_patch` call with multiple `edits`.\n"
+                "4. Do NOT make partial patches or loop on dry-runs. Submit your complete changeset directly.\n"
+                "5. In `replace_text`, provide sufficient unique surrounding lines in `old_text`.\n"
+                "6. Before finishing, run quick smoke tests or pytest to verify your changes don't raise unexpected TypeErrors or runtime regressions.\n"
+                "7. Work completely autonomously without asking interactive questions.\n"
+            )
     else:
         # Arm A: Native tools only
         claude_dir = os.path.join(run_ws, ".claude")
@@ -100,6 +134,7 @@ def run_eval_task(task, arm, run_idx, args, ts, base_ws_dir, graphstate_bin):
         "cost_usd": 0.0,
         "duration_s": 0.0,
         "session_id": None,
+        "resolved_model_id": None,
         "tools_called": [],
         "tool_counts": {}
     }
@@ -112,6 +147,7 @@ def run_eval_task(task, arm, run_idx, args, ts, base_ws_dir, graphstate_bin):
         agent_output["output_tokens"] = 1200 if arm == "A" else 1400
         agent_output["cost_usd"] = 0.08 if arm == "A" else 0.10
         agent_output["duration_s"] = 0.5
+        agent_output["resolved_model_id"] = args.model
     else:
         # Real Claude Code headless run
         claude_bin = shutil.which("claude") or "claude"
@@ -121,6 +157,7 @@ def run_eval_task(task, arm, run_idx, args, ts, base_ws_dir, graphstate_bin):
                 claude_bin, "-p", task["prompt"],
                 "--output-format", "json",
                 "--max-turns", str(args.max_turns),
+                "--permission-mode", "acceptEdits",
                 "--mcp-config", mcp_cfg,
                 "--strict-mcp-config",
                 "--allowedTools", "mcp__graphstate__*,Read,Grep,Glob,Bash",
@@ -142,8 +179,30 @@ def run_eval_task(task, arm, run_idx, args, ts, base_ws_dir, graphstate_bin):
             cmd.extend(["--effort", args.effort])
 
         timeout_sec = args.timeout_min * 60
-        code, out, err, dur, timed_out = run_cmd(cmd, cwd=run_ws, timeout=timeout_sec)
-        agent_output["duration_s"] = dur
+        max_attempts = 2
+        for attempt in range(max_attempts):
+            code, out, err, dur, timed_out = run_cmd(cmd, cwd=run_ws, timeout=timeout_sec)
+            agent_output["duration_s"] += dur
+
+            # Check for transient API error like ENOTFOUND
+            if out:
+                try:
+                    chk_data = json.loads(out)
+                    if chk_data.get("is_error") and "API Error" in str(chk_data.get("result", "")):
+                        if attempt < max_attempts - 1:
+                            time.sleep(3)
+                            continue
+                except Exception:
+                    pass
+            break
+
+        # Persist full execution log
+        run_log_path = os.path.join(os.path.dirname(run_ws), "agent.log")
+        try:
+            with open(run_log_path, "w", encoding="utf-8") as lfh:
+                lfh.write(f"=== EXIT CODE: {code} (timed_out={timed_out}) ===\n=== STDOUT ===\n{out}\n=== STDERR ===\n{err}\n")
+        except Exception:
+            pass
 
         if out:
             try:
@@ -159,6 +218,7 @@ def run_eval_task(task, arm, run_idx, args, ts, base_ws_dir, graphstate_bin):
                 agent_output["session_id"] = session_id
 
                 tool_calls = []
+                resolved_model_id = None
                 if session_id:
                     user_home = os.path.expanduser("~")
                     claude_projects_dir = os.path.join(user_home, ".claude", "projects")
@@ -173,6 +233,10 @@ def run_eval_task(task, arm, run_idx, args, ts, base_ws_dir, graphstate_bin):
                                                 if not line.strip():
                                                     continue
                                                 entry = json.loads(line)
+                                                if entry.get("type") == "model":
+                                                    mid = entry.get("identity", {}).get("modelId")
+                                                    if mid:
+                                                        resolved_model_id = mid
                                                 msg = entry.get("message", {})
                                                 content = msg.get("content", [])
                                                 if isinstance(content, list):
@@ -189,6 +253,7 @@ def run_eval_task(task, arm, run_idx, args, ts, base_ws_dir, graphstate_bin):
                     tool_counts[t] = tool_counts.get(t, 0) + 1
                 agent_output["tools_called"] = tool_calls
                 agent_output["tool_counts"] = tool_counts
+                agent_output["resolved_model_id"] = resolved_model_id
             except Exception:
                 pass
 
@@ -216,28 +281,45 @@ def run_eval_task(task, arm, run_idx, args, ts, base_ws_dir, graphstate_bin):
     )
     hallucinated_calls = audit_counts.get("MISSING_SYMBOL", 0)
 
-    # Unit regression tests: python -m unittest [regression_tests...] with PYTHONPATH=ws
-    test_env = {"PYTHONPATH": run_ws}
-    all_test_files = [
-        "eval/tests/test_billing.py",
-        "eval/tests/test_catalog.py",
-        "eval/tests/test_money.py",
-        "eval/tests/test_orders.py",
-        "eval/tests/test_reports.py",
-        "eval/tests/test_text.py"
-    ]
-    exclude = set(task.get("exclude_tests", []))
-    regression_tests = [f for f in all_test_files if os.path.basename(f) not in exclude]
+    # Unit regression tests
+    python_subpath = getattr(args, "python_path", "")
+    run_src = os.path.join(run_ws, python_subpath) if python_subpath else run_ws
+    test_env = {"PYTHONPATH": run_src}
 
-    t_code, t_out, t_err, _, _ = run_cmd(
-        [sys.executable, "-m", "unittest"] + regression_tests,
-        cwd=os.getcwd(),
-        env=test_env
-    )
+    exclude = set(task.get("exclude_tests", []))
+    oss_tests_dir = os.path.join(run_ws, "tests")
+    if os.path.isdir(oss_tests_dir) and "oss" in getattr(args, "tasks_file", "").lower():
+        candidate_tests = [
+            os.path.join(run_ws, "tests", "test_structures.py"),
+            os.path.join(run_ws, "tests", "test_hooks.py"),
+            os.path.join(run_ws, "tests", "test_adapters.py"),
+            os.path.join(run_ws, "tests", "test_utils.py")
+        ]
+        regression_tests = [f for f in candidate_tests if os.path.isfile(f) and os.path.basename(f) not in exclude]
+        t_code, t_out, t_err, _, _ = run_cmd(
+            [sys.executable, "-m", "pytest"] + regression_tests,
+            cwd=run_ws,
+            env=test_env
+        )
+    else:
+        all_test_files = [
+            "eval/tests/test_billing.py",
+            "eval/tests/test_catalog.py",
+            "eval/tests/test_money.py",
+            "eval/tests/test_orders.py",
+            "eval/tests/test_reports.py",
+            "eval/tests/test_text.py"
+        ]
+        regression_tests = [f for f in all_test_files if os.path.basename(f) not in exclude]
+        t_code, t_out, t_err, _, _ = run_cmd(
+            [sys.executable, "-m", "unittest"] + regression_tests,
+            cwd=os.getcwd(),
+            env=test_env
+        )
     all_tests_passed = (t_code == 0)
     tests_summary = t_err if t_err else t_out
 
-    # Task check script: python eval/checks/tNN.py ws
+    # Task check script: python eval/checks/tNN.py ws or eval/oss_checks/ossNN.py ws
     check_script = task.get("check")
     check_passed = False
     check_message = ""
@@ -246,10 +328,11 @@ def run_eval_task(task, arm, run_idx, args, ts, base_ws_dir, graphstate_bin):
         check_passed = (c_code == 0)
         check_message = (c_out + "\n" + c_err).strip()
 
-    # TypeScript type check: npx tsc --noEmit -p ws/web
+    # TypeScript type check: npx tsc --noEmit -p ws/web (only if web/ exists)
     ts_check = None
-    if shutil.which("npx"):
-        ts_code, _, _, _, _ = run_cmd(["npx", "tsc", "--noEmit", "-p", os.path.join(run_ws, "web")])
+    web_dir = os.path.join(run_ws, "web")
+    if os.path.isdir(web_dir) and shutil.which("npx"):
+        ts_code, _, _, _, _ = run_cmd(["npx", "tsc", "--noEmit", "-p", web_dir])
         ts_check = (ts_code == 0)
 
     # Overall task success per §13.6
@@ -270,6 +353,7 @@ def run_eval_task(task, arm, run_idx, args, ts, base_ws_dir, graphstate_bin):
         "audit_counts": audit_counts,
         "audit_findings_count": len(audit_findings),
         "ts_check": ts_check,
+        "resolved_model_id": agent_output.get("resolved_model_id"),
         "agent": agent_output
     }
 
@@ -282,13 +366,16 @@ def run_eval_task(task, arm, run_idx, args, ts, base_ws_dir, graphstate_bin):
 
 def main():
     parser = argparse.ArgumentParser(description="GraphState Evaluation Runner")
+    parser.add_argument("--tasks-file", default="eval/tasks.json", help="Path to tasks JSON file")
+    parser.add_argument("--workspace", default="eval/workspace", help="Path to base pristine workspace")
+    parser.add_argument("--python-path", default="", help="Subfolder in workspace to add to PYTHONPATH (e.g. 'src')")
     parser.add_argument("--tasks", default="all", help="Comma-separated task IDs or 'all'")
     parser.add_argument("--arms", default="A,B", help="Comma-separated arms: A, B, or A,B")
     parser.add_argument("--runs", type=int, default=1, help="Number of runs per (task, arm)")
     parser.add_argument("--model", default="claude-sonnet-5-5", help="Model name")
     parser.add_argument("--effort", default="medium", help="Effort level (low, medium, high)")
     parser.add_argument("--max-turns", type=int, default=40, help="Max turns per run")
-    parser.add_argument("--timeout-min", type=int, default=15, help="Timeout in minutes per run")
+    parser.add_argument("--timeout-min", type=int, default=6, help="Timeout in minutes per run")
     parser.add_argument("--budget-usd", type=float, default=60.0, help="Maximum budget in USD")
     parser.add_argument("--out", default="eval/results", help="Output directory for aggregated results")
     parser.add_argument("--graphstate-bin", default=None, help="Path to graphstate binary")
@@ -297,9 +384,10 @@ def main():
     args = parser.parse_args()
 
     graphstate_bin = find_graphstate_bin(args.graphstate_bin)
-    base_ws_dir = os.path.abspath("eval/workspace")
+    base_ws_dir = os.path.abspath(args.workspace)
+    ensure_workspace(base_ws_dir)
 
-    all_tasks = load_tasks("eval/tasks.json")
+    all_tasks = load_tasks(args.tasks_file)
     if args.tasks != "all":
         selected_ids = {t.strip().upper() for t in args.tasks.split(",")}
         tasks_to_run = [t for t in all_tasks if t["id"].upper() in selected_ids]
@@ -316,32 +404,52 @@ def main():
     print(f"Arms: {arms}, Runs per task/arm: {args.runs}")
     print(f"Dry Run: {args.dry_run}")
     print(f"Binary: {graphstate_bin}")
+    print(f"Workspace: {base_ws_dir}")
+    print(f"Tasks File: {args.tasks_file}")
     print("-" * 60)
 
     total_cost = 0.0
     results = []
 
     for task in tasks_to_run:
-        for arm in arms:
-            for r in range(1, args.runs + 1):
-                if total_cost >= args.budget_usd:
-                    print(f"Budget reached (${total_cost:.2f} >= ${args.budget_usd:.2f}). Stopping.")
-                    break
+        if total_cost >= args.budget_usd:
+            print(f"Budget reached (${total_cost:.2f} >= ${args.budget_usd:.2f}). Stopping.")
+            break
 
-                print(f"Running Task {task['id']} | Arm {arm} | Run {r}/{args.runs} ...", end=" ", flush=True)
-                res = run_eval_task(task, arm, r, args, ts, base_ws_dir, graphstate_bin)
-                cost = res["agent"]["cost_usd"]
-                total_cost += cost
-                results.append(res)
+        work_items = [(arm, r) for arm in arms for r in range(1, args.runs + 1)]
+        arms_str = ", ".join([f"{a}#{r}" for a, r in work_items])
+        print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Starting Task {task['id']} (concurrent: {arms_str}) ...", flush=True)
 
-                status = "PASS" if res["task_success"] else "FAIL"
-                print(f"{status} (broken_refs={res['broken_refs']}, syntax_errs={res['syntax_errors']}, cost=${cost:.3f})")
+        task_results = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(work_items)) as executor:
+            future_to_item = {
+                executor.submit(run_eval_task, task, arm, r, args, ts, base_ws_dir, graphstate_bin): (arm, r)
+                for arm, r in work_items
+            }
+            for future in concurrent.futures.as_completed(future_to_item):
+                arm, r = future_to_item[future]
+                try:
+                    res = future.result()
+                    task_results.append(res)
+                except Exception as ex:
+                    print(f"  Exception in Task {task['id']} Arm {arm} Run {r}: {ex}", flush=True)
+
+        # Sort results so Arm A comes before Arm B
+        task_results.sort(key=lambda x: (x["arm"], x["run_idx"]))
+        for res in task_results:
+            cost = res["agent"]["cost_usd"]
+            total_cost += cost
+            results.append(res)
+            status = "PASS" if res["task_success"] else "FAIL"
+            print(f"  -> Task {task['id']} | Arm {res['arm']} | Run {res['run_idx']} ... {status} (broken_refs={res['broken_refs']}, syntax_errs={res['syntax_errors']}, cost=${cost:.3f}, dur={res['agent']['duration_s']:.1f}s)", flush=True)
 
     # Save aggregated results
     summary_path = os.path.join(args.out, f"{ts}.json")
     with open(summary_path, "w", encoding="utf-8") as fh:
         json.dump({
             "timestamp": ts,
+            "tasks_file": args.tasks_file,
+            "workspace": args.workspace,
             "model": args.model,
             "dry_run": args.dry_run,
             "budget_usd": args.budget_usd,

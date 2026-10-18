@@ -1,0 +1,42 @@
+{
+  "timestamp": "20261018_122814",
+  "tasks_file": "eval/oss_tasks.json",
+  "workspace": "eval/oss_workspace/requests",
+  "model": "haiku",
+  "dry_run": false,
+  "budget_usd": 60.0,
+  "total_cost_usd": 0.0,
+  "runs_count": 1,
+  "results": [
+    {
+      "timestamp": "2026-10-18T12:29:21.824195",
+      "task_id": "OSS-06",
+      "arm": "B",
+      "run_idx": 1,
+      "task_success": false,
+      "check_passed": false,
+      "check_message": "Session.request missing 'allow_insecure_redirects' parameter",
+      "all_tests_passed": true,
+      "broken_refs": 0,
+      "hallucinated_calls": 0,
+      "syntax_errors": 0,
+      "audit_counts": {},
+      "audit_findings_count": 0,
+      "ts_check": null,
+      "resolved_model_id": null,
+      "agent": {
+        "turns": 0,
+        "input_tokens": 0,
+        "cache_read_tokens": 0,
+        "cache_creation_tokens": 0,
+        "output_tokens": 0,
+        "cost_usd": 0.0,
+        "duration_s": 55.75006365776062,
+        "session_id": null,
+        "resolved_model_id": null,
+        "tools_called": [],
+        "tool_counts": {}
+      }
+    }
+  ]
+}

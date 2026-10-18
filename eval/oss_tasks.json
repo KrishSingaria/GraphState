@@ -1,0 +1,77 @@
+[
+  {
+    "id": "OSS-01",
+    "category": "signature_change",
+    "component": "adapters.BaseAdapter.send",
+    "prompt": "In requests/adapters.py, add a required `connection_timeout` parameter to `BaseAdapter.send(self, request, connection_timeout, stream=False, timeout=None, verify=True, cert=None, proxies=None)` (position 2, right after request). Update `HTTPAdapter.send` to match this signature. Ensure callers across the repository support and forward connection_timeout, defaulting to None if omitted.",
+    "check": "eval/oss_checks/oss01.py",
+    "exclude_tests": ["test_adapters.py"]
+  },
+  {
+    "id": "OSS-02",
+    "category": "parameter_extension",
+    "component": "structures.CaseInsensitiveDict",
+    "prompt": "Refactor CaseInsensitiveDict in requests/structures.py: accept an optional `preserve_casing: bool = False` keyword argument in `__init__(self, data=None, preserve_casing=False, **kwargs)`. If `preserve_casing` is True, key lookups and lower_items retain exact original casing. Update its `copy()` method and ensure all consumers and callers across the repository support and propagate preserve_casing.",
+    "check": "eval/oss_checks/oss02.py",
+    "exclude_tests": ["test_structures.py"]
+  },
+  {
+    "id": "OSS-03",
+    "category": "iterator_protocol",
+    "component": "models.Response.iter_content",
+    "prompt": "In requests/models.py, update `Response.iter_content(self, chunk_size=1, decode_unicode=False, decoder=None)` to accept an optional `decoder=None` callable parameter. If provided, `decoder(chunk)` transforms each yielded byte chunk. Ensure all callers and wrapper methods across the codebase support and propagate the decoder parameter.",
+    "check": "eval/oss_checks/oss03.py"
+  },
+  {
+    "id": "OSS-04",
+    "category": "return_type_refactor",
+    "component": "utils.requote_uri",
+    "prompt": "In requests/utils.py, refactor `requote_uri(uri)` to return a structured 2-tuple `(safe_uri, has_fragment: bool)` instead of a raw string. Update all call sites across the codebase to unpack and handle the tuple properly.",
+    "check": "eval/oss_checks/oss04.py",
+    "exclude_tests": ["test_utils.py"]
+  },
+  {
+    "id": "OSS-05",
+    "category": "auth_context",
+    "component": "auth.HTTPBasicAuth",
+    "prompt": "In requests/auth.py, update `HTTPBasicAuth.__call__(self, r, context=None)` and `HTTPProxyAuth.__call__(self, r, context=None)` to accept an optional `context=None` dictionary. Update all authentication invocation sites across the repository to supply a context dictionary {'host': getattr(r, 'url', None)} when dispatching the auth handler.",
+    "check": "eval/oss_checks/oss05.py"
+  },
+  {
+    "id": "OSS-06",
+    "category": "dispatch_pipeline",
+    "component": "sessions.Session.request",
+    "prompt": "In requests/sessions.py, add an optional parameter `allow_insecure_redirects: bool = False` to `Session.request(self, method, url, allow_insecure_redirects=False, ...)`. Thread this parameter through all HTTP verb convenience helpers and ensure it is properly passed down through dispatch and redirect resolution.",
+    "check": "eval/oss_checks/oss06.py"
+  },
+  {
+    "id": "OSS-07",
+    "category": "keyword_enforcement",
+    "component": "cookies.create_cookie",
+    "prompt": "In requests/cookies.py, refactor `create_cookie(name, value, *, domain_specified=False, **kwargs)` to make `domain_specified` an explicit keyword-only argument. Update all callers across the repository to supply domain_specified=True when domain is present, or False.",
+    "check": "eval/oss_checks/oss07.py"
+  },
+  {
+    "id": "OSS-08",
+    "category": "hook_metrics",
+    "component": "hooks.dispatch_hook",
+    "prompt": "In requests/hooks.py, update `dispatch_hook(key, hooks, hook_data, timing_metrics=None, **kwargs)` to accept an optional `timing_metrics: dict = None`. When provided, record `{key: duration_seconds}` into timing_metrics. Update all hook dispatch callers across the repository to support supplying and collecting timing metrics.",
+    "check": "eval/oss_checks/oss08.py",
+    "exclude_tests": ["test_hooks.py"]
+  },
+  {
+    "id": "OSS-09",
+    "category": "exception_contract",
+    "component": "exceptions.RequestException",
+    "prompt": "In requests/exceptions.py, refactor `RequestException.__init__(self, *args, request, response=None, **kwargs)` so that `request` is a required keyword argument. Update derived exception constructors and all exception instantiation sites across the repository to supply the request object.",
+    "check": "eval/oss_checks/oss09.py"
+  },
+  {
+    "id": "OSS-10",
+    "category": "buffer_handling",
+    "component": "utils.super_len",
+    "prompt": "In requests/utils.py, update `super_len(o, allow_async_chunks=False)` to accept `allow_async_chunks: bool = False`. If True and `o` has a `read_chunk` or `async_read` attribute, calculate length using len(o.buffer) if present. Update all body preparation callers across the codebase to pass allow_async_chunks=True.",
+    "check": "eval/oss_checks/oss10.py",
+    "exclude_tests": ["test_utils.py"]
+  }
+]

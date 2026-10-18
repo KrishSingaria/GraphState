@@ -192,10 +192,10 @@ TEST_CASE("Config: default values integrity") {
   CHECK(cfg.falkordb.graph_prefix == "gs");
   CHECK(cfg.index.max_file_bytes == 1048576);
   CHECK(cfg.index.use_git_ls_files == true);
-  CHECK(cfg.index.ignore.size() == 10);
+  CHECK(cfg.index.ignore.size() == 13);
   CHECK(cfg.python.source_roots == std::vector<std::string>{"", "src"});
   CHECK(cfg.gate.mode == "enforce");
-  CHECK(cfg.gate.protected_patterns.size() == 7);
+  CHECK(cfg.gate.protected_patterns.size() == 10);
   CHECK(cfg.memory.user_graph == "gs:__user__");
   CHECK(cfg.log.level == "info");
 }

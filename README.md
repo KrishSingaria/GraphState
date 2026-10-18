@@ -1,6 +1,6 @@
 # GraphState 🛡️🧠
 
-> **Deterministic Code Gatekeeper & Persistent Graph Memory for AI Coding Agents, Powered by FalkorDB**
+> **GraphState is a deterministic C++20 code gatekeeper and persistent graph memory engine for AI coding agents, powered by FalkorDB, ensuring zero broken callers, atomic commits, and robust coding in mission-critical systems.**
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![C++20](https://img.shields.io/badge/Language-C%2B%2B20-00599C.svg)](https://en.cppreference.com/w/cpp/20)
@@ -9,8 +9,9 @@
 
 Submitted to **Graph Hacks: Context for AI Agents** (WeMakeDevs × FalkorDB)  
 **Tracks Entered:**
-- **Track 1:** Context for AI Agents (Code Graph Intelligence & Structural Bouncer)
-- **Track 2:** Graph RAG / Memory / Innovation (Semantic Cross-Session Memory & Automated Pitfall Learning)
+- **Track 1:** Agents That Act on Connected Data (Code Graph Intelligence & Structural Bouncer)
+- **Track 2:** Agent Memory and Coordination (Dual-Graph Persistent Memory & Cross-Session Pitfall Recall)
+- **Track 3:** Company Brain (Repository Architectural Graph, Centrality Intelligence & Load-Bearing Symbol Protection)
 
 ---
 
@@ -254,19 +255,33 @@ GraphState separates code understanding from human memory across two graphs:
 
 ---
 
-## 9. Evaluation Results (Milestone 10a)
+## 9. Evaluation Results (Real-World OSS Benchmark: `psf/requests`)
 
-The evaluation harness ran real-world tasks across two conditions:
-- **Arm A (Baseline)**: Standard agent without GraphState.
-- **Arm B (GraphState Gatekeeper)**: Agent gated by GraphState verification.
+To rigorously test GraphState under real-world conditions, we built an automated, side-by-side evaluation harness comparing:
+- **Arm A (Baseline)**: Claude Code (`claude-haiku-5-5`) operating directly against the repository filesystem with native tools (`Read`, `Edit`, `Grep`, `Bash`).
+- **Arm B (GraphState Gatekeeper)**: Claude Code operating through GraphState's MCP tools (`gs:read_symbol`, `gs:get_impact`, `gs:propose_patch`) with strict Phase 1–5 pre-commit gatekeeping.
 
-| Metric | Arm A (Baseline) | Arm B (GraphState) | Improvement |
+Evaluated across **10 non-trivial engineering tasks** (20 total runs) on **`psf/requests` v2.32.3** (~35,000 LOC):
+
+| Metric | Arm A (Baseline) | Arm B (GraphState) | Trade-Off & Findings |
 |---|---|---|---|
-| **Broken References Introduced** | 3.2 avg / task | **0** | **100% eliminated** |
-| **Hallucinated Calls** | 2.1 avg / task | **0** | **100% eliminated** |
-| **Unfixed Caller Blast Radius** | 4.0 avg / task | **0** | **100% eliminated** |
-| **Task Completion Rate** | 60% | **100%** | **+40% increase** |
-| **Token Cost to Fix Regressions** | High (Multi-turn debugging) | Low (Instant gate feedback) | **~35% savings** |
+| **Task Success Rate** | 10/10 (100%) | 10/10 (100%) | **Tied**: Both arms successfully completed all 10 tasks |
+| **Broken References Introduced** | 0 | 0 | **Tied**: Zero broken references in committed code |
+| **Syntax Errors Introduced** | 0 | 0 | **Tied**: Zero syntax errors introduced |
+| **Total Financial Cost (10 tasks)** | **$0.20** | $0.44 | **Arm A Wins (2.2x cheaper)**: Baseline avoids MCP schema & AST context token overhead |
+| **Average Turns per Task** | 19.7 turns | **19.2 turns** | **Arm B Wins**: GraphState achieves a lower average turn count |
+| **Complex Blast-Radius Refactoring (`OSS-09`)** | 46 turns (50 edits, 40 test runs) | **22 turns (1 patch, 18 test runs)** | **Arm B Wins (52% turn reduction)**: Upfront caller impact eliminates debug thrashing |
+| **Filesystem Safety & Atomicity** | None (direct disk writes; trial-and-error) | **Guaranteed (Atomic WAL commit)** | **Arm B Wins**: Patches verified in-memory before disk write; zero intermediate corruption |
+
+### The "Fifty-Fifty" Real-World Reality
+The benchmark demonstrates an authentic engineering trade-off:
+- **For simple, localized edits**: Baseline is lighter and more cost-effective because it avoids recurring MCP tool definition overhead.
+- **For cross-cutting architectural refactors & automated pipelines**: GraphState cuts cognitive turns in half (e.g. 22 vs 46 turns on `OSS-09`), provides full multi-hop blast radius visibility, and physically guarantees that no broken or uncompilable intermediate state touches disk.
+
+### Robust Coding for Critical & High-Valued Systems
+While raw un-gated text editing suffices for casual scripts or non-critical prototypes, **this type of tool is particularly helpful for mission-critical, high-valued, and enterprise systems**. In high-stakes environments—such as financial transaction engines, infrastructure platforms, healthcare systems, or core shared libraries—an AI agent introducing a silent caller breakage or leaving corrupted files on disk can cause devastating downtime. By providing pre-commit AST verification and atomic write-ahead journaling, GraphState makes AI-assisted coding substantially more robust for production environments where reliability is non-negotiable.
+
+> Detailed per-task metrics, tool breakdowns, and failure analysis are documented in [`docs/eval.md`](docs/eval.md).
 
 ---
 

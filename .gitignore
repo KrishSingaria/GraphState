@@ -2,6 +2,8 @@ build/
 /.graphstate/
 benchmark_project/.graphstate/
 eval/runs/
+eval/oss_workspace/
+eval/workspaces/
 .codegraph/
 .agents/
 __pycache__/

@@ -1,5 +1,7 @@
 # GraphState: 3-Minute Hackathon Demo Script & Walkthrough
 
+> **GraphState is a deterministic C++20 code gatekeeper and persistent graph memory engine for AI coding agents, powered by FalkorDB, ensuring zero broken callers, atomic commits, and robust coding in mission-critical systems.**
+>
 > **Companion guide for the 3-minute hackathon demo video submission.**  
 > Matches requirements in `docs/design/01-product-and-scope.md` (§01.8) and `docs/design/11-build-plan.md` (§11.7).
 

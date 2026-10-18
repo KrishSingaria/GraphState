@@ -1,5 +1,7 @@
 # GraphState Benchmark Results
 
+> **GraphState is a deterministic C++20 code gatekeeper and persistent graph memory engine for AI coding agents, powered by FalkorDB, ensuring zero broken callers, atomic commits, and robust coding in mission-critical systems.**
+>
 > Benchmark measured on 8 files (27 symbols) with FalkorDB.
 
 ## Performance Summary vs. Design Targets

@@ -29,6 +29,9 @@ struct IndexConfig {
     "**/build/**",
     "**/target/**",
     "**/.graphstate/**",
+    "**/.remember/**",
+    "**/.claude/**",
+    "**/.agents/**",
     "**/*.min.js"
   };
   bool use_git_ls_files = true;
@@ -51,6 +54,9 @@ struct GateConfig {
   std::vector<std::string> protected_patterns = {
     ".git/**",
     ".graphstate/**",
+    ".remember/**",
+    ".claude/**",
+    ".agents/**",
     "**/.env",
     "**/.env.*",
     "**/*.lock",

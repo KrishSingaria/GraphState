@@ -535,6 +535,41 @@ void register_read_tools(ToolRegistry& reg) {
               risk = "medium";
             }
           } catch (...) {}
+        } else {
+          // Offline fallback from in-memory FactStore and Resolver
+          std::string target_file = resolved.file;
+          auto dependents = ctx.engine.resolver().dependents_of(target_file);
+          dependents.push_back(target_file);
+
+          for (const auto& dep_f : dependents) {
+            auto dep_calls = ctx.engine.resolver().resolve_file(ctx.engine.fact_store(), dep_f);
+            for (const auto& rc : dep_calls) {
+              if (rc.target_id == sym_id || rc.call_text.find(resolved.sym->name) != std::string::npos) {
+                callers.push_back({
+                    {"caller", rc.caller_id},
+                    {"file", dep_f},
+                    {"line", rc.line},
+                    {"col", rc.col},
+                    {"call", rc.call_text},
+                    {"depth", 1},
+                    {"confidence", rc.confidence}
+                });
+                bool file_already_present = false;
+                for (const auto& existing_f : files) {
+                  if (existing_f == dep_f) { file_already_present = true; break; }
+                }
+                if (!file_already_present) {
+                  files.push_back(dep_f);
+                }
+              }
+            }
+          }
+
+          if (files.size() >= 5) {
+            risk = "high";
+          } else if (files.size() >= 2) {
+            risk = "medium";
+          }
         }
 
         return {

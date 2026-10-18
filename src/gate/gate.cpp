@@ -658,6 +658,42 @@ void Gate::p1_edit(const PatchRequest& req,
       std::string old_s = *e.old_text;
       std::string new_s = *e.new_text;
 
+      if (is_crlf) {
+        if (old_s.find("\r\n") == std::string::npos && old_s.find('\n') != std::string::npos) {
+          std::string norm_old;
+          for (size_t i = 0; i < old_s.size(); ++i) {
+            if (old_s[i] == '\n' && (i == 0 || old_s[i - 1] != '\r')) norm_old += '\r';
+            norm_old += old_s[i];
+          }
+          old_s = std::move(norm_old);
+        }
+        if (new_s.find("\r\n") == std::string::npos && new_s.find('\n') != std::string::npos) {
+          std::string norm_new;
+          for (size_t i = 0; i < new_s.size(); ++i) {
+            if (new_s[i] == '\n' && (i == 0 || new_s[i - 1] != '\r')) norm_new += '\r';
+            norm_new += new_s[i];
+          }
+          new_s = std::move(norm_new);
+        }
+      } else {
+        if (old_s.find("\r\n") != std::string::npos) {
+          std::string norm_old;
+          for (size_t i = 0; i < old_s.size(); ++i) {
+            if (old_s[i] == '\r' && i + 1 < old_s.size() && old_s[i + 1] == '\n') continue;
+            norm_old += old_s[i];
+          }
+          old_s = std::move(norm_old);
+        }
+        if (new_s.find("\r\n") != std::string::npos) {
+          std::string norm_new;
+          for (size_t i = 0; i < new_s.size(); ++i) {
+            if (new_s[i] == '\r' && i + 1 < new_s.size() && new_s[i + 1] == '\n') continue;
+            norm_new += new_s[i];
+          }
+          new_s = std::move(norm_new);
+        }
+      }
+
       // Count occurrences
       size_t count = 0;
       size_t pos = 0;
@@ -840,6 +876,19 @@ void Gate::p1_edit(const PatchRequest& req,
 
         uint32_t start = target_sym->def_range.start;
         uint32_t end = target_sym->def_range.end;
+
+        // Expand start back to line beginning if only whitespace precedes the definition on that line
+        size_t line_start = current_text.rfind('\n', start == 0 ? 0 : start - 1);
+        line_start = (line_start == std::string_view::npos) ? 0 : line_start + 1;
+        bool only_spaces = true;
+        for (size_t i = line_start; i < start; ++i) {
+          if (current_text[i] != ' ' && current_text[i] != '\t') {
+            only_spaces = false;
+            break;
+          }
+        }
+        if (only_spaces) start = static_cast<uint32_t>(line_start);
+
         std::string updated = current_text.substr(0, start) + reindented + current_text.substr(end);
 
         buf.post = updated;
@@ -1139,6 +1188,43 @@ void Gate::p4_blast_radius(const std::map<std::string, Buffer>& ws,
         caller_rows.push_back(row_json);
       }
     } catch (...) {}
+  } else {
+    // Offline mode: find callers across repository from FactStore and Resolver
+    std::unordered_set<std::string> files_to_check;
+    for (const auto& t : targets) {
+      size_t sep = t.find("::");
+      if (sep != std::string::npos) {
+        std::string tf = t.substr(0, sep);
+        auto deps = engine_.resolver().dependents_of(tf);
+        for (const auto& d : deps) files_to_check.insert(d);
+        files_to_check.insert(tf);
+      }
+    }
+    for (const auto& cf : files_to_check) {
+      if (std::find(exclude_files.begin(), exclude_files.end(), cf) != exclude_files.end()) continue;
+      auto resolved_calls = engine_.resolver().resolve_file(engine_.fact_store(), cf);
+      for (const auto& r_call : resolved_calls) {
+        for (const auto& t : targets) {
+          if (r_call.target_id == t) {
+            nlohmann::json r = {
+                {"target", t},
+                {"caller", r_call.caller_id},
+                {"file", cf},
+                {"line", r_call.line},
+                {"col", r_call.col},
+                {"call", r_call.call_text},
+                {"pos_args", r_call.pos_args},
+                {"kw_names", r_call.kw_names},
+                {"has_star", r_call.has_star},
+                {"has_dstar", r_call.has_dstar},
+                {"confidence", r_call.confidence},
+                {"call_kind", r_call.call_kind}
+            };
+            caller_rows.push_back(std::move(r));
+          }
+        }
+      }
+    }
   }
 
   // 2. Combine with post-state call sites in WorkingSet
@@ -1258,6 +1344,21 @@ void Gate::p4_blast_radius(const std::map<std::string, Buffer>& ws,
   for (const auto& [f, buf] : ws) {
     if (!buf.post.has_value() || buf.is_deleted) continue;
 
+    auto is_pre_existing_import = [&](const lang::ImportFact& current_imp, const std::string& imported_name) -> bool {
+      if (buf.is_new) return false;
+      for (const auto& pre_imp : buf.pre_facts.imports) {
+        if (pre_imp.spec == current_imp.spec) {
+          if (imported_name.empty()) {
+            return true;
+          }
+          for (const auto& [pn, pa] : pre_imp.names) {
+            if (pn == imported_name) return true;
+          }
+        }
+      }
+      return false;
+    };
+
     // Check imports
     for (const auto& imp : buf.post_facts.imports) {
       if (imp.kind == lang::ImportFact::FromNames || imp.kind == lang::ImportFact::TsNamed) {
@@ -1309,6 +1410,9 @@ void Gate::p4_blast_radius(const std::map<std::string, Buffer>& ws,
         }
 
         if (mod_file.empty() && should_check_missing) {
+          if (is_pre_existing_import(imp, "")) {
+            continue;
+          }
           violations.push_back(Violation{
               .code = "MISSING_MODULE",
               .severity = Severity::Error,
@@ -1332,6 +1436,9 @@ void Gate::p4_blast_radius(const std::map<std::string, Buffer>& ws,
           }
 
           if (!exists) {
+            if (is_pre_existing_import(imp, "")) {
+              continue;
+            }
             violations.push_back(Violation{
                 .code = "MISSING_MODULE",
                 .severity = Severity::Error,
@@ -1357,9 +1464,36 @@ void Gate::p4_blast_radius(const std::map<std::string, Buffer>& ws,
               if (s.kind != lang::SymbolKind::Module) mod_symbols.push_back(s.name);
             }
             for (const auto& exp : mod_facts->exports) mod_symbols.push_back(exp);
+            for (const auto& m_name : mod_facts->module_names) {
+              mod_symbols.push_back(m_name);
+            }
+            bool has_star_import = false;
+            for (const auto& imp_sub : mod_facts->imports) {
+              for (const auto& [n, alias] : imp_sub.names) {
+                if (n == "*") {
+                  has_star_import = true;
+                } else if (!alias.empty()) {
+                  mod_symbols.push_back(alias);
+                } else {
+                  mod_symbols.push_back(n);
+                }
+              }
+              if (imp_sub.kind == lang::ImportFact::Module) {
+                std::string sub_name = imp_sub.spec;
+                size_t dot_pos = sub_name.find_last_of('.');
+                if (dot_pos != std::string::npos) sub_name = sub_name.substr(dot_pos + 1);
+                mod_symbols.push_back(sub_name);
+              }
+            }
+
+            if (has_star_import || !mod_facts->parse_ok) {
+              continue;
+            }
 
             for (const auto& [name, alias] : imp.names) {
               if (name == "*") continue;
+              if (is_pre_existing_import(imp, name)) continue;
+
               bool found = false;
               for (const auto& s_name : mod_symbols) {
                 if (s_name == name) { found = true; break; }
