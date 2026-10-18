@@ -35,6 +35,21 @@ jobs:
             echo "::error title=Test Failure on ${{ matrix.preset }}::$ERR"
             exit 1
           }
+      - name: Stage Artifact
+        shell: bash
+        run: |
+          mkdir -p dist
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cp build/${{ matrix.preset }}/graphstate.exe dist/
+          else
+            cp build/${{ matrix.preset }}/graphstate dist/
+          fi
+      - name: Upload Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: graphstate-${{ matrix.preset }}
+          path: dist/*
+          if-no-files-found: error
   db-tests:
     runs-on: ubuntu-24.04
     services:

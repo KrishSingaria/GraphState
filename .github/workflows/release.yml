@@ -1,0 +1,80 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            preset: windows-msvc-release
+            artifact_name: graphstate-windows-x64.zip
+            binary: graphstate.exe
+          - os: macos-14
+            preset: macos-release
+            artifact_name: graphstate-macos-arm64.tar.gz
+            binary: graphstate
+          - os: ubuntu-24.04
+            preset: linux-release
+            artifact_name: graphstate-linux-x64.tar.gz
+            binary: graphstate
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+      - uses: seanmiddleditch/gha-setup-ninja@v5
+      - run: cmake --preset ${{ matrix.preset }}
+      - name: Build Target
+        run: cmake --build --preset ${{ matrix.preset }} --target graphstate
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p package
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cp build/${{ matrix.preset }}/${{ matrix.binary }} package/
+            cp LICENSE README.md package/
+            cd package && 7z a ../${{ matrix.artifact_name }} *
+          else
+            cp build/${{ matrix.preset }}/${{ matrix.binary }} package/
+            cp LICENSE README.md package/
+            tar -czvf ${{ matrix.artifact_name }} -C package .
+          fi
+      - name: Upload Package Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_name }}
+
+  publish-release:
+    needs: build-release
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all package artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true
+      - name: Compute Checksums
+        run: |
+          cd release-artifacts
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" release-artifacts/* \
+            --title "GraphState ${{ github.ref_name }}" \
+            --generate-notes

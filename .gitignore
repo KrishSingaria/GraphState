@@ -8,3 +8,6 @@ eval/workspaces/
 .agents/
 __pycache__/
 *.pyc
+dist/
+*.zip
+*.tar.gz
