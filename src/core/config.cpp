@@ -111,10 +111,11 @@ void try_load_file(const std::filesystem::path& path, Config& cfg) {
 } // namespace
 
 std::string Config::workspace_key() const {
+  std::filesystem::path norm_root = root.lexically_normal();
   std::error_code ec;
-  std::filesystem::path real_p = std::filesystem::exists(root, ec)
-      ? std::filesystem::canonical(root, ec)
-      : std::filesystem::weakly_canonical(root, ec);
+  std::filesystem::path real_p = std::filesystem::exists(norm_root, ec)
+      ? std::filesystem::canonical(norm_root, ec)
+      : std::filesystem::weakly_canonical(norm_root, ec);
 
   std::string real_str = platform::to_utf8(real_p);
   for (char& c : real_str) {
@@ -125,11 +126,18 @@ std::string Config::workspace_key() const {
     real_str = real_str.substr(4);
   }
 
+  while (real_str.size() > 1 && real_str.back() == '/') {
+    if (real_str.size() == 3 && real_str[1] == ':') {
+      break;
+    }
+    real_str.pop_back();
+  }
+
   std::string hash_suffix = xxh3_hex(real_str).substr(0, 8);
 
-  std::string base = root.filename().string();
+  std::string base = norm_root.filename().string();
   if (base.empty()) {
-    base = root.parent_path().filename().string();
+    base = norm_root.parent_path().filename().string();
   }
   if (base.empty()) {
     base = "workspace";

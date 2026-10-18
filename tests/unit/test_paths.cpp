@@ -593,11 +593,18 @@ TEST_CASE("adversarial config: workspace key edge cases") {
   Config cfg;
 
   // Trailing slash invariance
-  cfg.root = fs::path("g:/GraphState/");
+  fs::path tmp_trailing = fs::temp_directory_path() / "gs_test_trailing";
+  cfg.root = tmp_trailing.string() + "/";
   std::string key1 = cfg.workspace_key();
-  cfg.root = fs::path("g:/GraphState");
+  cfg.root = tmp_trailing;
   std::string key2 = cfg.workspace_key();
   CHECK(key1 == key2);
+
+  cfg.root = fs::path("z:/non_existent_workspace/");
+  std::string key_ne1 = cfg.workspace_key();
+  cfg.root = fs::path("z:/non_existent_workspace");
+  std::string key_ne2 = cfg.workspace_key();
+  CHECK(key_ne1 == key_ne2);
 
   // Root directory
   cfg.root = fs::path("C:/");

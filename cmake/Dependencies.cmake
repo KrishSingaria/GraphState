@@ -23,10 +23,10 @@ if(TARGET hiredis AND NOT TARGET hiredis::hiredis)
 endif()
 
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/generated/hiredis")
-file(WRITE "${CMAKE_BINARY_DIR}/generated/hiredis/hiredis.h" "#pragma once\n#include \"${hiredis_SOURCE_DIR}/hiredis.h\"\n")
+file(WRITE "${CMAKE_BINARY_DIR}/generated/hiredis/hiredis.h" "#pragma once\n#if defined(__GNUC__) || defined(__clang__)\n#pragma GCC diagnostic push\n#pragma GCC diagnostic ignored \"-Wpedantic\"\n#endif\n#include \"${hiredis_SOURCE_DIR}/hiredis.h\"\n#if defined(__GNUC__) || defined(__clang__)\n#pragma GCC diagnostic pop\n#endif\n")
 file(WRITE "${CMAKE_BINARY_DIR}/generated/hiredis/async.h" "#pragma once\n#include \"${hiredis_SOURCE_DIR}/async.h\"\n")
 file(WRITE "${CMAKE_BINARY_DIR}/generated/hiredis/read.h" "#pragma once\n#include \"${hiredis_SOURCE_DIR}/read.h\"\n")
-file(WRITE "${CMAKE_BINARY_DIR}/generated/hiredis/sds.h" "#pragma once\n#include \"${hiredis_SOURCE_DIR}/sds.h\"\n")
+file(WRITE "${CMAKE_BINARY_DIR}/generated/hiredis/sds.h" "#pragma once\n#if defined(__GNUC__) || defined(__clang__)\n#pragma GCC diagnostic push\n#pragma GCC diagnostic ignored \"-Wpedantic\"\n#endif\n#include \"${hiredis_SOURCE_DIR}/sds.h\"\n#if defined(__GNUC__) || defined(__clang__)\n#pragma GCC diagnostic pop\n#endif\n")
 
 if(GS_BUILD_TESTS)
   FetchContent_Declare(doctest GIT_REPOSITORY https://github.com/doctest/doctest.git GIT_TAG v2.5.3 GIT_SHALLOW TRUE)
